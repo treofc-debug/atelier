@@ -43,7 +43,13 @@ const CONFIG = {
     },
     
     // Email do vendedor para receber cópia dos pedidos
-    vendorEmail: 'contato@atelierstore.com.br'
+    vendorEmail: 'contato@atelierstore.com.br',
+    
+    // ============================================
+    // GOOGLE SHEETS (Banco de Dados)
+    // ============================================
+    // Após implantar o Google Apps Script, cole a URL aqui
+    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbwFqhnIyJEdukN6P9L0bK0viWZoYnfErR_nE9tEqI1IK1VLiT6ESrzUUMwKDQMa3gUj/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
 };
 
 // ============================================
@@ -685,15 +691,21 @@ async function sendTelegram() {
     const customerData = getFormData();
     const { message, orderNum } = formatOrderMessage(customerData);
     
-    // Save order locally first
+    // Save order (envia para Google Sheets que notifica o Telegram automaticamente)
     saveOrder(orderNum, customerData);
     
-    // Primeiro mostra o modal de sucesso
+    // Mostra o modal de sucesso
     showTrackingModal(orderNum);
     clearCartAfterOrder();
     closeCheckoutModal();
     
-    // Tenta enviar via API (pode falhar por CORS em arquivos locais)
+    // Se Google Sheets está configurado, a notificação já foi enviada pelo Apps Script
+    if (CONFIG.googleSheetsApi && CONFIG.googleSheetsApi !== 'COLE_SUA_URL_AQUI') {
+        showToast('Pedido enviado com sucesso! ✅');
+        return;
+    }
+    
+    // Fallback: tenta enviar direto via API (pode falhar por CORS)
     try {
         const response = await fetch(`https://api.telegram.org/bot${CONFIG.telegramBotToken}/sendMessage`, {
             method: 'POST',
@@ -712,11 +724,9 @@ async function sendTelegram() {
         if (result.ok) {
             showToast('Pedido enviado com sucesso! ✅');
         } else {
-            // Copia mensagem para envio manual
             copyOrderToClipboard(message);
         }
     } catch (error) {
-        // CORS error em arquivo local - copia para clipboard
         copyOrderToClipboard(message);
     }
 }
@@ -769,10 +779,8 @@ function closeTrackingModal() {
     document.body.style.overflow = '';
 }
 
-// Save order to localStorage
+// Save order to localStorage AND Google Sheets
 function saveOrder(orderNum, customerData) {
-    const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
-    
     const orderData = {
         orderNumber: orderNum,
         customer: customerData,
@@ -782,12 +790,45 @@ function saveOrder(orderNum, customerData) {
         status: 'received'
     };
     
+    // Salva localmente (backup)
+    const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
     orders.push(orderData);
     localStorage.setItem('atelierOrders', JSON.stringify(orders));
+    
+    // Salva no Google Sheets
+    saveOrderToGoogleSheets(orderData);
     
     // Envia email de confirmação se configurado
     if (CONFIG.emailjs.enabled && customerData.email) {
         sendConfirmationEmail(orderData, customerData);
+    }
+}
+
+// Salva o pedido no Google Sheets
+async function saveOrderToGoogleSheets(orderData) {
+    // Verifica se a API está configurada
+    if (!CONFIG.googleSheetsApi || CONFIG.googleSheetsApi === 'COLE_SUA_URL_AQUI') {
+        console.log('Google Sheets não configurado, usando apenas localStorage');
+        return;
+    }
+    
+    try {
+        const response = await fetch(CONFIG.googleSheetsApi, {
+            method: 'POST',
+            mode: 'no-cors', // Necessário para Google Apps Script
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'saveOrder',
+                order: orderData
+            })
+        });
+        
+        console.log('Pedido enviado para Google Sheets');
+    } catch (error) {
+        console.error('Erro ao salvar no Google Sheets:', error);
+        // Pedido já está salvo localmente, então não precisa fazer nada
     }
 }
 
@@ -933,15 +974,66 @@ function closeOrderTrackingModal() {
     document.body.style.overflow = '';
 }
 
-// Search for order
-function searchOrder(code) {
-    const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
-    const order = orders.find(o => o.orderNumber.toUpperCase() === code.toUpperCase());
+// Search for order (tenta Google Sheets primeiro, depois localStorage)
+async function searchOrder(code) {
+    // Mostra loading
+    const searchBtn = trackingSearchForm.querySelector('button');
+    const originalText = searchBtn.textContent;
+    searchBtn.textContent = 'Buscando...';
+    searchBtn.disabled = true;
     
-    if (order) {
-        displayOrderDetails(order);
-    } else {
-        showNotFound();
+    try {
+        // Tenta buscar no Google Sheets primeiro
+        if (CONFIG.googleSheetsApi && CONFIG.googleSheetsApi !== 'COLE_SUA_URL_AQUI') {
+            const order = await searchOrderInGoogleSheets(code);
+            if (order) {
+                displayOrderDetails(order);
+                searchBtn.textContent = originalText;
+                searchBtn.disabled = false;
+                return;
+            }
+        }
+        
+        // Se não encontrou no Sheets, busca no localStorage
+        const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
+        const localOrder = orders.find(o => o.orderNumber.toUpperCase() === code.toUpperCase());
+        
+        if (localOrder) {
+            displayOrderDetails(localOrder);
+        } else {
+            showNotFound();
+        }
+    } catch (error) {
+        console.error('Erro na busca:', error);
+        // Fallback para localStorage
+        const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
+        const localOrder = orders.find(o => o.orderNumber.toUpperCase() === code.toUpperCase());
+        
+        if (localOrder) {
+            displayOrderDetails(localOrder);
+        } else {
+            showNotFound();
+        }
+    }
+    
+    searchBtn.textContent = originalText;
+    searchBtn.disabled = false;
+}
+
+// Busca pedido no Google Sheets
+async function searchOrderInGoogleSheets(code) {
+    try {
+        const url = `${CONFIG.googleSheetsApi}?action=getOrder&orderNumber=${encodeURIComponent(code)}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success && data.order) {
+            return data.order;
+        }
+        return null;
+    } catch (error) {
+        console.error('Erro ao buscar no Google Sheets:', error);
+        return null;
     }
 }
 
@@ -953,13 +1045,25 @@ function displayOrderDetails(order) {
     
     // Update header
     document.getElementById('displayOrderNumber').textContent = order.orderNumber;
-    document.getElementById('displayOrderDate').textContent = new Date(order.date).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    
+    // Formata a data (pode vir como string do Google Sheets ou ISO do localStorage)
+    let dateDisplay = order.date;
+    try {
+        if (order.date && order.date.includes('T')) {
+            // Formato ISO do localStorage
+            dateDisplay = new Date(order.date).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        // Se vier do Google Sheets, já está formatado como string
+    } catch (e) {
+        dateDisplay = order.date;
+    }
+    document.getElementById('displayOrderDate').textContent = dateDisplay;
     
     // Update status badge
     const statusBadge = document.getElementById('orderStatusBadge');
