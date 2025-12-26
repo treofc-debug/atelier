@@ -265,58 +265,73 @@ const CHAT_ID = '7625866003';
 
 // Envia notificação no Telegram com botões de ação
 function sendTelegramNotification(order) {
-  let message = `🛍️ *NOVO PEDIDO - ATELIER*\n`;
-  message += `━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `📋 *Pedido #${order.orderNumber}*\n`;
-  message += `📅 Data: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\n\n`;
-  
-  message += `👤 *DADOS DO CLIENTE*\n`;
-  message += `Nome: ${order.customer.name}\n`;
-  message += `Telefone: ${order.customer.phone}\n`;
-  if (order.customer.email) message += `E-mail: ${order.customer.email}\n`;
-  message += `\n📍 *ENDEREÇO DE ENTREGA*\n`;
-  message += `${order.customer.address}\n`;
-  message += `${order.customer.city} - CEP: ${order.customer.cep}\n\n`;
-  
-  message += `🛒 *ITENS DO PEDIDO*\n`;
-  message += `━━━━━━━━━━━━━━━━━━\n`;
-  
-  order.items.forEach(item => {
-    message += `▸ ${item.name}\n`;
-    message += `   Tam: ${item.size} | Qtd: ${item.quantity} | R$ ${(item.price * item.quantity).toFixed(2)}\n`;
-  });
-  
-  message += `━━━━━━━━━━━━━━━━━━\n`;
-  message += `💰 *TOTAL: R$ ${order.total.toFixed(2)}*\n\n`;
-  
-  if (order.customer.notes) {
-    message += `📝 *Observações:*\n${order.customer.notes}\n\n`;
-  }
-  
-  message += `✨ _Clique nos botões abaixo para atualizar o status:_`;
-  
-  // Botões inline para atualizar status
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: '📦 Preparando', callback_data: `status:${order.orderNumber}:preparing` },
-        { text: '🚚 Enviado', callback_data: `status:${order.orderNumber}:shipped` }
-      ],
-      [
-        { text: '✅ Entregue', callback_data: `status:${order.orderNumber}:delivered` },
-        { text: '❌ Cancelar', callback_data: `status:${order.orderNumber}:cancelled` }
-      ],
-      [
-        { text: '📱 WhatsApp Cliente', url: `https://wa.me/55${order.customer.phone.replace(/\D/g, '')}` }
-      ]
-    ]
-  };
-  
-  // Envia para o Telegram
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
   try {
-    UrlFetchApp.fetch(url, {
+    // Garante que os valores estão no formato correto
+    const orderNumber = String(order.orderNumber || 'N/A');
+    const customerName = String(order.customer?.name || 'N/A');
+    const customerPhone = String(order.customer?.phone || '').replace(/\D/g, '');
+    const customerEmail = order.customer?.email || '';
+    const customerAddress = String(order.customer?.address || 'N/A');
+    const customerCity = String(order.customer?.city || 'N/A');
+    const customerCep = String(order.customer?.cep || 'N/A');
+    const customerNotes = order.customer?.notes || '';
+    const totalValue = parseFloat(order.total) || 0;
+    
+    let message = `🛍️ *NOVO PEDIDO - ATELIER*\n`;
+    message += `━━━━━━━━━━━━━━━━━━\n\n`;
+    message += `📋 *Pedido #${orderNumber}*\n`;
+    message += `📅 Data: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\n\n`;
+    
+    message += `👤 *DADOS DO CLIENTE*\n`;
+    message += `Nome: ${customerName}\n`;
+    message += `Telefone: ${order.customer?.phone || 'N/A'}\n`;
+    if (customerEmail) message += `E-mail: ${customerEmail}\n`;
+    message += `\n📍 *ENDEREÇO DE ENTREGA*\n`;
+    message += `${customerAddress}\n`;
+    message += `${customerCity} - CEP: ${customerCep}\n\n`;
+    
+    message += `🛒 *ITENS DO PEDIDO*\n`;
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach(item => {
+        const itemPrice = parseFloat(item.price) || 0;
+        const itemQty = parseInt(item.quantity) || 1;
+        message += `▸ ${item.name || 'Produto'}\n`;
+        message += `   Tam: ${item.size || 'N/A'} | Qtd: ${itemQty} | R$ ${(itemPrice * itemQty).toFixed(2)}\n`;
+      });
+    }
+    
+    message += `━━━━━━━━━━━━━━━━━━\n`;
+    message += `💰 *TOTAL: R$ ${totalValue.toFixed(2)}*\n\n`;
+    
+    if (customerNotes) {
+      message += `📝 *Observações:*\n${customerNotes}\n\n`;
+    }
+    
+    message += `✨ _Clique nos botões abaixo para atualizar o status:_`;
+    
+    // Botões inline para atualizar status
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: '📦 Preparando', callback_data: `status:${orderNumber}:preparing` },
+          { text: '🚚 Enviado', callback_data: `status:${orderNumber}:shipped` }
+        ],
+        [
+          { text: '✅ Entregue', callback_data: `status:${orderNumber}:delivered` },
+          { text: '❌ Cancelar', callback_data: `status:${orderNumber}:cancelled` }
+        ],
+        [
+          { text: '📱 WhatsApp Cliente', url: `https://wa.me/55${customerPhone}` }
+        ]
+      ]
+    };
+    
+    // Envia para o Telegram
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    
+    const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify({
@@ -324,10 +339,30 @@ function sendTelegramNotification(order) {
         text: message,
         parse_mode: 'Markdown',
         reply_markup: keyboard
-      })
+      }),
+      muteHttpExceptions: true
     });
+    
+    console.log('Telegram response:', response.getContentText());
+    
   } catch (error) {
     console.error('Erro ao enviar Telegram:', error);
+    
+    // Fallback: envia mensagem simples sem botões
+    try {
+      const simpleMessage = `🛍️ Novo pedido #${order.orderNumber || 'N/A'}\nTotal: R$ ${order.total || 0}`;
+      UrlFetchApp.fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: simpleMessage
+        }),
+        muteHttpExceptions: true
+      });
+    } catch (e) {
+      console.error('Erro no fallback:', e);
+    }
   }
 }
 
