@@ -1787,15 +1787,13 @@ button {
 }
 
 .tracking-success {
-    margin-bottom: var(--space-xl);
-    padding-bottom: var(--space-lg);
-    border-bottom: 1px solid var(--color-border-light);
+    margin-bottom: var(--space-lg);
 }
 
 .success-icon {
     width: 80px;
     height: 80px;
-    margin: 0 auto var(--space-lg);
+    margin: 0 auto var(--space-md);
     background: linear-gradient(135deg, #25D366 0%, #20BD5A 100%);
     border-radius: 50%;
     display: flex;
@@ -1818,7 +1816,7 @@ button {
     font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 500;
-    margin-bottom: var(--space-sm);
+    margin-bottom: 0.5rem;
 }
 
 .order-number {
@@ -1834,13 +1832,10 @@ button {
 .tracking-info {
     background: var(--color-bg);
     border-radius: var(--radius-md);
-    padding: var(--space-xl);
-    margin-bottom: var(--space-xl);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
     text-align: center;
-}
-
-.tracking-info h3 {
-    margin-top: var(--space-md);
+    position: relative; /* ← LINHA NOVA */
 }
 
 .tracking-info h3 {
@@ -1856,6 +1851,8 @@ button {
 
 .tracking-info .btn-telegram {
     margin-bottom: var(--space-lg);
+    position: relative; /* ← LINHA NOVA */
+    z-index: 10;        /* ← LINHA NOVA */
 }
 
 .tracking-steps {
