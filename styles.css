@@ -1787,13 +1787,15 @@ button {
 }
 
 .tracking-success {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border-light);
 }
 
 .success-icon {
     width: 80px;
     height: 80px;
-    margin: 0 auto var(--space-md);
+    margin: 0 auto var(--space-lg);
     background: linear-gradient(135deg, #25D366 0%, #20BD5A 100%);
     border-radius: 50%;
     display: flex;
@@ -1816,7 +1818,7 @@ button {
     font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-sm);
 }
 
 .order-number {
@@ -1832,9 +1834,13 @@ button {
 .tracking-info {
     background: var(--color-bg);
     border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    margin-bottom: var(--space-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
     text-align: center;
+}
+
+.tracking-info h3 {
+    margin-top: var(--space-md);
 }
 
 .tracking-info h3 {
