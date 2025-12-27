@@ -49,7 +49,7 @@ const CONFIG = {
     // GOOGLE SHEETS (Banco de Dados)
     // ============================================
     // Após implantar o Google Apps Script, cole a URL aqui
-    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbxj-VmDIHXnCB3TaNMvVaE-CJxvhtYl0anwpAna_oRc2Z1f5sOMd0ivQphg88DOBpAd/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
+    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbzG9GuhN-zjGlVa8F3aSfBGFv_9Yc8HPto7GA9fZT4HPdoHd3v-EtdUuuNlxFUW6Wpe/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
 };
 
 // ============================================
@@ -1198,4 +1198,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartUI();
     checkUrlForOrderCode();
 });
+
 
