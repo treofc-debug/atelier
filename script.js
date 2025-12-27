@@ -49,7 +49,7 @@ const CONFIG = {
     // GOOGLE SHEETS (Banco de Dados)
     // ============================================
     // Após implantar o Google Apps Script, cole a URL aqui
-    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbwFqhnIyJEdukN6P9L0bK0viWZoYnfErR_nE9tEqI1IK1VLiT6ESrzUUMwKDQMa3gUj/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
+    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbxj-VmDIHXnCB3TaNMvVaE-CJxvhtYl0anwpAna_oRc2Z1f5sOMd0ivQphg88DOBpAd/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
 };
 
 // ============================================

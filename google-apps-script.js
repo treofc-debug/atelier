@@ -15,7 +15,7 @@
 
 const botToken = '7898087319:AAHP0XDRUN8vyaxUYANv8bZMGrD3hRLZj6o';
 const sheetId = '1XRjmWTfBps5tzt9REgdKczqTtuOWHDWTopFDoUaRd8k';
-const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbzA-94TBIImBhstGsB6p-zxiHs6dvNdTDzFaVjNFLuugu8HuXvcmAGZ_0R3_LUK1NH1/exec';
+const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbxj-VmDIHXnCB3TaNMvVaE-CJxvhtYl0anwpAna_oRc2Z1f5sOMd0ivQphg88DOBpAd/exec';
 
 // Nomes das abas
 const SHEET_PEDIDOS = 'Pedidos';
@@ -97,49 +97,65 @@ function doGet(e) {
 
 // Salva um novo pedido
 function saveOrder(order) {
-  const ss = initSheets();
-  const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
-  const itensSheet = ss.getSheetByName(SHEET_ITENS);
-  
-  // Formata a data
-  const dataFormatada = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-  
-  // Adiciona o pedido
-  pedidosSheet.appendRow([
-    order.orderNumber,
-    dataFormatada,
-    'Pedido Recebido',
-    order.customer.name,
-    order.customer.phone,
-    order.customer.email || '',
-    order.customer.address,
-    order.customer.city,
-    order.customer.cep,
-    order.customer.notes || '',
-    order.total,
-    order.origin || 'Site'
-  ]);
-  
-  // Adiciona os itens
-  order.items.forEach(item => {
-    itensSheet.appendRow([
-      order.orderNumber,
-      item.name,
-      item.size,
-      item.quantity,
-      item.price,
-      item.price * item.quantity
+  try {
+    console.log('Salvando pedido:', JSON.stringify(order));
+    
+    const ss = initSheets();
+    const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
+    const itensSheet = ss.getSheetByName(SHEET_ITENS);
+    
+    // Formata a data
+    const dataFormatada = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    
+    // Adiciona o pedido
+    pedidosSheet.appendRow([
+      order.orderNumber || 'N/A',
+      dataFormatada,
+      'Pedido Recebido',
+      order.customer?.name || 'N/A',
+      order.customer?.phone || 'N/A',
+      order.customer?.email || '',
+      order.customer?.address || 'N/A',
+      order.customer?.city || 'N/A',
+      order.customer?.cep || 'N/A',
+      order.customer?.notes || '',
+      order.total || 0,
+      order.origin || 'Site'
     ]);
-  });
-  
-  // Envia notificação no Telegram
-  sendTelegramNotification(order);
-  
-  return jsonResponse({ 
-    success: true, 
-    message: 'Pedido salvo com sucesso!',
-    orderNumber: order.orderNumber 
-  });
+    
+    // Adiciona os itens
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach(item => {
+        itensSheet.appendRow([
+          order.orderNumber || 'N/A',
+          item.name || 'Produto',
+          item.size || 'N/A',
+          item.quantity || 1,
+          item.price || 0,
+          (item.price || 0) * (item.quantity || 1)
+        ]);
+      });
+    }
+    
+    console.log('Pedido salvo na planilha, enviando Telegram...');
+    
+    // Envia notificação no Telegram
+    sendTelegramNotification(order);
+    
+    console.log('Processo concluído!');
+    
+    return jsonResponse({ 
+      success: true, 
+      message: 'Pedido salvo com sucesso!',
+      orderNumber: order.orderNumber 
+    });
+  } catch (error) {
+    console.error('Erro ao salvar pedido:', error);
+    return jsonResponse({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 }
 
 // Busca um pedido pelo código
@@ -312,21 +328,28 @@ function sendTelegramNotification(order) {
     message += `✨ _Clique nos botões abaixo para atualizar o status:_`;
     
     // Botões inline para atualizar status
-    const keyboard = {
+    // Limita o orderNumber para evitar callback_data muito longo (max 64 bytes)
+    const shortOrderNum = orderNumber.substring(0, 20);
+    
+    let keyboard = {
       inline_keyboard: [
         [
-          { text: '📦 Preparando', callback_data: `status:${orderNumber}:preparing` },
-          { text: '🚚 Enviado', callback_data: `status:${orderNumber}:shipped` }
+          { text: '📦 Preparando', callback_data: 'st:' + shortOrderNum + ':prep' },
+          { text: '🚚 Enviado', callback_data: 'st:' + shortOrderNum + ':ship' }
         ],
         [
-          { text: '✅ Entregue', callback_data: `status:${orderNumber}:delivered` },
-          { text: '❌ Cancelar', callback_data: `status:${orderNumber}:cancelled` }
-        ],
-        [
-          { text: '📱 WhatsApp Cliente', url: `https://wa.me/55${customerPhone}` }
+          { text: '✅ Entregue', callback_data: 'st:' + shortOrderNum + ':done' },
+          { text: '❌ Cancelar', callback_data: 'st:' + shortOrderNum + ':canc' }
         ]
       ]
     };
+    
+    // Adiciona botão WhatsApp apenas se tiver telefone válido
+    if (customerPhone && customerPhone.length >= 10) {
+      keyboard.inline_keyboard.push([
+        { text: '📱 WhatsApp Cliente', url: 'https://wa.me/55' + customerPhone }
+      ]);
+    }
     
     // Envia para o Telegram
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -375,37 +398,48 @@ function processCallback(update) {
   const messageId = update.callback_query.message.message_id;
   const chatId = update.callback_query.message.chat.id;
   
-  // Parse do callback: status:ORDER_NUMBER:NEW_STATUS
+  console.log('Callback recebido:', callbackData);
+  
+  // Parse do callback: st:ORDER_NUMBER:STATUS_CODE
   const parts = callbackData.split(':');
-  if (parts[0] !== 'status') return;
+  if (parts[0] !== 'st') {
+    answerCallback(callbackId, 'Ação não reconhecida');
+    return;
+  }
   
   const orderNumber = parts[1];
-  const newStatus = parts[2];
+  const statusCode = parts[2];
   
-  // Mapeia código para texto
+  // Mapeia código curto para texto completo
   const statusMap = {
-    'preparing': 'Em Preparação',
-    'shipped': 'Enviado',
-    'delivered': 'Entregue',
-    'cancelled': 'Cancelado'
+    'prep': 'Em Preparação',
+    'ship': 'Enviado',
+    'done': 'Entregue',
+    'canc': 'Cancelado'
   };
   
   const statusEmoji = {
-    'preparing': '📦',
-    'shipped': '🚚',
-    'delivered': '✅',
-    'cancelled': '❌'
+    'prep': '📦',
+    'ship': '🚚',
+    'done': '✅',
+    'canc': '❌'
   };
   
+  const newStatus = statusCode;
+  
   // Atualiza na planilha
-  const statusText = statusMap[newStatus] || newStatus;
+  const statusText = statusMap[statusCode] || statusCode;
+  const emoji = statusEmoji[statusCode] || '📋';
+  
   updateOrderStatusInSheet(orderNumber, statusText);
   
   // Responde ao callback
-  answerCallback(callbackId, `${statusEmoji[newStatus]} Status atualizado para: ${statusText}`);
+  answerCallback(callbackId, `${emoji} Status atualizado para: ${statusText}`);
   
   // Atualiza a mensagem original
-  updateMessageStatus(chatId, messageId, orderNumber, statusText, statusEmoji[newStatus]);
+  updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji);
+  
+  console.log('Status atualizado:', orderNumber, statusText);
 }
 
 // Atualiza o status na planilha
@@ -447,19 +481,20 @@ function answerCallback(callbackId, text) {
 // Atualiza a mensagem com o novo status
 function updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji) {
   const url = `https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`;
+  const shortOrderNum = orderNumber.substring(0, 20);
   
   // Novos botões mostrando o status atual
   const keyboard = {
     inline_keyboard: [
       [
-        { text: `${emoji} STATUS: ${statusText.toUpperCase()}`, callback_data: 'none' }
+        { text: emoji + ' STATUS: ' + statusText.toUpperCase(), callback_data: 'info' }
       ],
       [
-        { text: '📦 Preparando', callback_data: `status:${orderNumber}:preparing` },
-        { text: '🚚 Enviado', callback_data: `status:${orderNumber}:shipped` }
+        { text: '📦 Preparando', callback_data: 'st:' + shortOrderNum + ':prep' },
+        { text: '🚚 Enviado', callback_data: 'st:' + shortOrderNum + ':ship' }
       ],
       [
-        { text: '✅ Entregue', callback_data: `status:${orderNumber}:delivered` }
+        { text: '✅ Entregue', callback_data: 'st:' + shortOrderNum + ':done' }
       ]
     ]
   };
