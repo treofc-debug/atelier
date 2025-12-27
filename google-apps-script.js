@@ -13,7 +13,7 @@
 
 const botToken = '7898087319:AAHP0XDRUN8vyaxUYANv8bZMGrD3hRLZj6o';
 const sheetId = '1XRjmWTfBps5tzt9REgdKczqTtuOWHDWTopFDoUaRd8k';
-const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbxj-VmDIHXnCB3TaNMvVaE-CJxvhtYl0anwpAna_oRc2Z1f5sOMd0ivQphg88DOBpAd/exec';
+const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbyY2z7TGO02Nsm2yKhQcA_AvipBNwOcBI1PocRdMPqoTefJCGFtQ-H-wXS_NXBcf2PD/exec';
 const CHAT_ID = '7625866003';
 
 // Configurações de retry
@@ -489,21 +489,43 @@ function statusToCode(statusText) {
   return statusMap[statusText] || 'received';
 }
 
-// Atualiza o status de um pedido
+// Atualiza o status de um pedido (via API)
 function updateOrderStatus(orderNumber, newStatus) {
-  const ss = SpreadsheetApp.openById(sheetId);
-  const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
-  
-  const data = pedidosSheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toString().toUpperCase() === orderNumber.toUpperCase()) {
-      pedidosSheet.getRange(i + 1, 3).setValue(newStatus);
-      return jsonResponse({ success: true, message: 'Status atualizado!' });
+  try {
+    console.log('📝 API: Atualizando status do pedido:', orderNumber, '→', newStatus);
+    
+    const ss = SpreadsheetApp.openById(sheetId);
+    const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
+    
+    if (!pedidosSheet) {
+      return jsonResponse({ success: false, error: 'Planilha não encontrada' });
     }
+    
+    const data = pedidosSheet.getDataRange().getValues();
+    
+    // Remove prefixos comuns para comparação flexível
+    const cleanOrderNumber = orderNumber.replace(/^(TEST-|#)/i, '').toUpperCase();
+    
+    for (let i = 1; i < data.length; i++) {
+      const rowOrderNumber = String(data[i][0] || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+      
+      // Comparação flexível: verifica se um contém o outro
+      const matchExact = rowOrderNumber === cleanOrderNumber;
+      const matchPartial = rowOrderNumber.includes(cleanOrderNumber) || cleanOrderNumber.includes(rowOrderNumber);
+      
+      if (matchExact || matchPartial) {
+        pedidosSheet.getRange(i + 1, 3).setValue(newStatus);
+        console.log('✅ Status atualizado com sucesso!');
+        return jsonResponse({ success: true, message: 'Status atualizado!' });
+      }
+    }
+    
+    console.log('❌ Pedido não encontrado:', orderNumber);
+    return jsonResponse({ success: false, error: 'Pedido não encontrado' });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar status:', error.toString());
+    return jsonResponse({ success: false, error: error.message });
   }
-  
-  return jsonResponse({ success: false, error: 'Pedido não encontrado' });
 }
 
 // Busca todos os pedidos
@@ -533,24 +555,54 @@ function getAllOrders() {
 
 // Processa os callbacks dos botões do Telegram
 function processCallback(update) {
-  if (!update.callback_query) return;
+  console.log('═══════════════════════════════════════');
+  console.log('📥 CALLBACK RECEBIDO DO TELEGRAM');
+  console.log('═══════════════════════════════════════');
+  
+  if (!update.callback_query) {
+    console.log('❌ Nenhum callback_query no update');
+    return;
+  }
   
   const callbackData = update.callback_query.data;
   const callbackId = update.callback_query.id;
   const messageId = update.callback_query.message.message_id;
   const chatId = update.callback_query.message.chat.id;
   
-  console.log('Callback recebido:', callbackData);
+  console.log('📋 Dados do callback:', {
+    callbackData: callbackData,
+    callbackId: callbackId,
+    messageId: messageId,
+    chatId: chatId
+  });
+  
+  // Verifica se é apenas informação (clique no status atual)
+  if (callbackData === 'info') {
+    answerCallback(callbackId, 'Este é o status atual do pedido');
+    return;
+  }
   
   // Parse do callback: st:ORDER_NUMBER:STATUS_CODE
   const parts = callbackData.split(':');
+  console.log('🔍 Partes do callback:', parts);
+  
   if (parts[0] !== 'st') {
+    console.log('⚠️ Callback não é de status:', parts[0]);
     answerCallback(callbackId, 'Ação não reconhecida');
+    return;
+  }
+  
+  if (parts.length < 3) {
+    console.log('❌ Callback malformado, partes insuficientes');
+    answerCallback(callbackId, 'Erro: dados incompletos');
     return;
   }
   
   const orderNumber = parts[1];
   const statusCode = parts[2];
+  
+  console.log('📝 Número do pedido (truncado):', orderNumber);
+  console.log('📝 Código do status:', statusCode);
   
   // Mapeia código curto para texto completo
   const statusMap = {
@@ -571,58 +623,135 @@ function processCallback(update) {
   const statusText = statusMap[statusCode] || statusCode;
   const emoji = statusEmoji[statusCode] || '📋';
   
-  updateOrderStatusInSheet(orderNumber, statusText);
+  console.log('📝 Status a ser aplicado:', statusText);
+  console.log('🔄 Iniciando atualização na planilha...');
+  
+  const updateResult = updateOrderStatusInSheet(orderNumber, statusText);
+  console.log('📊 Resultado da atualização:', updateResult ? 'SUCESSO' : 'FALHA');
   
   // Busca o telefone do cliente para manter o botão WhatsApp
+  console.log('🔍 Iniciando busca do telefone...');
   const customerPhone = getCustomerPhone(orderNumber);
+  console.log('📱 Telefone retornado:', customerPhone || 'null/vazio');
   
-  // Responde ao callback
-  answerCallback(callbackId, `${emoji} Status atualizado para: ${statusText}`);
+  // Responde ao callback com feedback baseado no resultado
+  if (updateResult) {
+    answerCallback(callbackId, `${emoji} Status atualizado para: ${statusText}`);
+  } else {
+    answerCallback(callbackId, `⚠️ Pedido não encontrado, verifique a planilha`);
+  }
   
   // Atualiza a mensagem original (agora com telefone)
+  console.log('🔄 Atualizando botões da mensagem...');
   updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji, customerPhone);
   
-  console.log('Status atualizado:', orderNumber, statusText);
+  console.log('═══════════════════════════════════════');
+  console.log('✅ PROCESSAMENTO DO CALLBACK CONCLUÍDO');
+  console.log('═══════════════════════════════════════');
 }
 
-// Atualiza o status na planilha
+// Atualiza o status na planilha (com busca flexível para números truncados)
 function updateOrderStatusInSheet(orderNumber, statusText) {
-  const ss = SpreadsheetApp.openById(sheetId);
-  const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
-  
-  if (!pedidosSheet) return;
-  
-  const data = pedidosSheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toString().toUpperCase() === orderNumber.toUpperCase()) {
-      pedidosSheet.getRange(i + 1, 3).setValue(statusText);
-      return;
+  try {
+    console.log('🔄 Atualizando status do pedido:', orderNumber, '→', statusText);
+    
+    const ss = SpreadsheetApp.openById(sheetId);
+    const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
+    
+    if (!pedidosSheet) {
+      console.log('❌ Planilha de pedidos não encontrada');
+      return false;
     }
+    
+    const data = pedidosSheet.getDataRange().getValues();
+    console.log('📊 Total de linhas na planilha:', data.length);
+    
+    // Remove prefixos comuns para comparação flexível
+    const cleanOrderNumber = orderNumber.replace(/^(TEST-|#)/i, '').toUpperCase();
+    console.log('🔍 Buscando por (limpo):', cleanOrderNumber);
+    
+    for (let i = 1; i < data.length; i++) {
+      const rowOrderNumber = String(data[i][0] || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+      
+      // Comparação flexível: verifica se um contém o outro (para números truncados)
+      const matchExact = rowOrderNumber === cleanOrderNumber;
+      const matchPartial = rowOrderNumber.includes(cleanOrderNumber) || cleanOrderNumber.includes(rowOrderNumber);
+      
+      if (matchExact || matchPartial) {
+        console.log('✓ Pedido encontrado na linha', i + 1, '- Código:', data[i][0]);
+        pedidosSheet.getRange(i + 1, 3).setValue(statusText);
+        console.log('✅ Status atualizado com sucesso!');
+        return true;
+      }
+    }
+    
+    console.log('❌ Pedido não encontrado:', orderNumber);
+    console.log('💡 Pedidos disponíveis:', data.slice(1).map(row => row[0]).join(', '));
+    return false;
+  } catch (error) {
+    console.error('❌ Erro ao atualizar status:', error.toString());
+    return false;
   }
 }
 
 // Busca o telefone do cliente na planilha
 function getCustomerPhone(orderNumber) {
   try {
+    console.log('🔍 Buscando telefone para pedido:', orderNumber);
+    
     const ss = SpreadsheetApp.openById(sheetId);
     const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
     
-    if (!pedidosSheet) return null;
+    if (!pedidosSheet) {
+      console.log('❌ Planilha não encontrada');
+      return null;
+    }
     
     const data = pedidosSheet.getDataRange().getValues();
+    console.log('📊 Total de linhas na planilha:', data.length);
+    
+    // Remove prefixos comuns do número do pedido para comparação
+    const cleanOrderNumber = orderNumber.replace(/^(TEST-|#)/i, '');
     
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0].toString().toUpperCase() === orderNumber.toUpperCase()) {
-        // Coluna 4 (índice 4) é o telefone
-        const phone = String(data[i][4] || '').replace(/\D/g, '');
-        return phone.length >= 10 ? phone : null;
+      const rowOrderNumber = String(data[i][0] || '').replace(/^(TEST-|#)/i, '');
+      
+      // Comparação mais flexível
+      if (rowOrderNumber.toUpperCase().includes(cleanOrderNumber.toUpperCase()) || 
+          cleanOrderNumber.toUpperCase().includes(rowOrderNumber.toUpperCase())) {
+        
+        console.log('✓ Pedido encontrado na linha', i + 1);
+        console.log('📋 Dados da linha:', {
+          codigo: data[i][0],
+          nome: data[i][3],
+          telefone: data[i][4]
+        });
+        
+        // Coluna 4 (índice 4) é o telefone (Código, Data, Status, Nome, Telefone...)
+        const rawPhone = data[i][4];
+        const phone = String(rawPhone || '').replace(/\D/g, '');
+        
+        console.log('📱 Telefone bruto:', rawPhone);
+        console.log('📱 Telefone limpo:', phone);
+        console.log('📱 Tamanho:', phone.length);
+        
+        if (phone.length >= 10) {
+          console.log('✅ Telefone válido:', phone);
+          return phone;
+        } else {
+          console.log('⚠️ Telefone muito curto ou inválido');
+          return null;
+        }
       }
     }
     
+    console.log('❌ Pedido não encontrado na planilha');
+    console.log('💡 Buscando por:', orderNumber);
+    console.log('💡 Pedidos disponíveis:', data.slice(1).map(row => row[0]).join(', '));
+    
     return null;
   } catch (error) {
-    console.error('Erro ao buscar telefone:', error);
+    console.error('❌ Erro ao buscar telefone:', error.toString());
     return null;
   }
 }
@@ -648,6 +777,14 @@ function answerCallback(callbackId, text) {
 
 // Atualiza a mensagem com o novo status
 function updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji, customerPhone) {
+  console.log('📝 updateMessageStatus chamada com:', {
+    orderNumber,
+    statusText,
+    emoji,
+    customerPhone: customerPhone || 'null/vazio',
+    phoneLength: customerPhone ? customerPhone.length : 0
+  });
+  
   const url = `https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`;
   const shortOrderNum = orderNumber.substring(0, 20);
   
@@ -669,23 +806,38 @@ function updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji, 
   
   // Mantém o botão do WhatsApp se tiver telefone válido
   if (customerPhone && customerPhone.length >= 10) {
+    console.log('✅ Adicionando botão WhatsApp com telefone:', customerPhone);
     keyboard.inline_keyboard.push([
       { text: '📱 WhatsApp Cliente', url: 'https://wa.me/55' + customerPhone }
     ]);
+  } else {
+    console.log('⚠️ Botão WhatsApp NÃO adicionado. Telefone inválido ou ausente.');
   }
   
+  console.log('📤 Enviando teclado atualizado:', JSON.stringify(keyboard, null, 2));
+  
   try {
-    UrlFetchApp.fetch(url, {
+    const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify({
         chat_id: chatId,
         message_id: messageId,
         reply_markup: keyboard
-      })
+      }),
+      muteHttpExceptions: true
     });
+    
+    const responseCode = response.getResponseCode();
+    console.log('📥 Resposta do Telegram:', responseCode);
+    
+    if (responseCode === 200) {
+      console.log('✅ Botões atualizados com sucesso!');
+    } else {
+      console.error('❌ Erro ao atualizar botões:', response.getContentText());
+    }
   } catch (error) {
-    console.error('Erro ao atualizar mensagem:', error);
+    console.error('❌ Erro ao atualizar mensagem:', error.toString());
   }
 }
 

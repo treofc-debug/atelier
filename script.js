@@ -10,22 +10,22 @@ const CONFIG = {
     // Número do WhatsApp do vendedor (com código do país, sem +)
     // Exemplo: 5511999999999 (55 = Brasil, 11 = DDD, resto = número)
     whatsappNumber: '5511999999999',
-    
+
     // Username do bot do Telegram (sem @)
     // Crie um bot no @BotFather do Telegram
     telegramBotUsername: 'atelier_store_bot',
-    
+
     // Token do bot do Telegram (para enviar mensagens)
     // Obtenha no @BotFather ao criar o bot
     telegramBotToken: '7898087319:AAHP0XDRUN8vyaxUYANv8bZMGrD3hRLZj6o',
-    
+
     // Chat ID do Telegram para receber pedidos (seu ID ou do grupo)
     // Use @userinfobot para descobrir seu ID
     telegramChatId: '7625866003',
-    
+
     // Nome da loja
     storeName: 'ATELIER',
-    
+
     // ============================================
     // CONFIGURAÇÃO DE EMAIL (EmailJS - Gratuito)
     // ============================================
@@ -34,22 +34,22 @@ const CONFIG = {
     // 2. Adicione um serviço de email (Gmail, Outlook, etc)
     // 3. Crie um template de email
     // 4. Copie os IDs abaixo
-    
+
     emailjs: {
         enabled: true, // Mude para true após configurar
         publicKey: 'N__CTpvGXyWaO9Wve', // Dashboard > Account > Public Key
         serviceId: 'service_d2clahx', // Dashboard > Email Services > Service ID
         templateId: 'template_qytoi22' // Dashboard > Email Templates > Template ID
     },
-    
+
     // Email do vendedor para receber cópia dos pedidos
     vendorEmail: 'contato@atelierstore.com.br',
-    
+
     // ============================================
     // GOOGLE SHEETS (Banco de Dados)
     // ============================================
     // Após implantar o Google Apps Script, cole a URL aqui
-    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbzG9GuhN-zjGlVa8F3aSfBGFv_9Yc8HPto7GA9fZT4HPdoHd3v-EtdUuuNlxFUW6Wpe/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
+    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbz8I4wBh-YcMXcFXAkyczi6xYPlyGzQN_rDLj6b6mKUEXL9xdOHH8xK_U-op6mRmnSB/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
 };
 
 // ============================================
@@ -119,7 +119,7 @@ function formatPrice(price) {
 function showToast(message) {
     toastMessage.textContent = message;
     toast.classList.add('active');
-    
+
     setTimeout(() => {
         toast.classList.remove('active');
     }, 3000);
@@ -165,10 +165,10 @@ document.querySelectorAll('.mobile-nav-links a').forEach(link => {
 
 // Render products grid
 function renderProducts(filter = 'all') {
-    const filteredProducts = filter === 'all' 
-        ? productsData 
+    const filteredProducts = filter === 'all'
+        ? productsData
         : productsData.filter(p => p.category === filter);
-    
+
     productsGrid.innerHTML = filteredProducts.map((product, index) => `
         <article class="product-card" data-id="${product.id}" style="animation-delay: ${index * 0.1}s">
             <div class="product-image">
@@ -198,7 +198,7 @@ function renderProducts(filter = 'all') {
             </div>
         </article>
     `).join('');
-    
+
     // Add event listeners to quick view buttons
     document.querySelectorAll('.quick-view-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -236,9 +236,9 @@ filterTabs.forEach(tab => {
 function openQuickView(productId) {
     const product = productsData.find(p => p.id === productId);
     if (!product) return;
-    
+
     selectedSize = null;
-    
+
     modalContent.innerHTML = `
         <div class="modal-image">
             <img src="${product.image}" alt="${product.name}">
@@ -287,7 +287,7 @@ function openQuickView(productId) {
             </div>
         </div>
     `;
-    
+
     // Size selection
     modalContent.querySelectorAll('.size-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -296,7 +296,7 @@ function openQuickView(productId) {
             selectedSize = btn.dataset.size;
         });
     });
-    
+
     // Add to cart from modal
     modalContent.querySelector('.add-to-cart-modal').addEventListener('click', () => {
         if (!selectedSize) {
@@ -306,7 +306,7 @@ function openQuickView(productId) {
         addToCart(product.id, selectedSize);
         closeQuickView();
     });
-    
+
     // Show modal
     modalOverlay.classList.add('active');
     quickViewModal.classList.add('active');
@@ -329,17 +329,17 @@ modalOverlay.addEventListener('click', closeQuickView);
 function updateCartUI() {
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     // Update cart count
     cartCount.textContent = itemCount;
     cartCount.classList.toggle('visible', itemCount > 0);
-    
+
     // Update cart total
     cartTotal.textContent = formatPrice(total);
-    
+
     // Update cart footer visibility
     cartFooter.style.display = cart.length > 0 ? 'block' : 'none';
-    
+
     // Render cart items
     if (cart.length === 0) {
         cartItems.innerHTML = `
@@ -355,7 +355,7 @@ function updateCartUI() {
         `;
         return;
     }
-    
+
     cartItems.innerHTML = cart.map(item => `
         <div class="cart-item" data-id="${item.id}" data-size="${item.size}">
             <div class="cart-item-image">
@@ -374,20 +374,20 @@ function updateCartUI() {
             <button class="cart-item-remove" data-id="${item.id}" data-size="${item.size}">Remover</button>
         </div>
     `).join('');
-    
+
     // Add event listeners for quantity buttons
     cartItems.querySelectorAll('.qty-minus').forEach(btn => {
         btn.addEventListener('click', () => {
             updateQuantity(parseInt(btn.dataset.id), btn.dataset.size, -1);
         });
     });
-    
+
     cartItems.querySelectorAll('.qty-plus').forEach(btn => {
         btn.addEventListener('click', () => {
             updateQuantity(parseInt(btn.dataset.id), btn.dataset.size, 1);
         });
     });
-    
+
     cartItems.querySelectorAll('.cart-item-remove').forEach(btn => {
         btn.addEventListener('click', () => {
             removeFromCart(parseInt(btn.dataset.id), btn.dataset.size);
@@ -398,9 +398,9 @@ function updateCartUI() {
 function addToCart(productId, size) {
     const product = productsData.find(p => p.id === productId);
     if (!product) return;
-    
+
     const existingItem = cart.find(item => item.id === productId && item.size === size);
-    
+
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
@@ -413,11 +413,11 @@ function addToCart(productId, size) {
             quantity: 1
         });
     }
-    
+
     saveCart();
     updateCartUI();
     showToast(`${product.name} adicionado ao carrinho`);
-    
+
     // Open cart sidebar
     openCart();
 }
@@ -425,14 +425,14 @@ function addToCart(productId, size) {
 function updateQuantity(productId, size, change) {
     const item = cart.find(item => item.id === productId && item.size === size);
     if (!item) return;
-    
+
     item.quantity += change;
-    
+
     if (item.quantity <= 0) {
         removeFromCart(productId, size);
         return;
     }
-    
+
     saveCart();
     updateCartUI();
 }
@@ -467,7 +467,7 @@ cartOverlay.addEventListener('click', closeCartSidebar);
 newsletterForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const email = newsletterForm.querySelector('input').value;
-    
+
     // Simulate form submission
     showToast('Inscrição realizada com sucesso! 🎉');
     newsletterForm.reset();
@@ -478,17 +478,17 @@ newsletterForm.addEventListener('submit', (e) => {
 // ============================================
 
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
+    anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         if (href === '#') return;
-        
+
         e.preventDefault();
         const target = document.querySelector(href);
         if (target) {
             const headerOffset = 80;
             const elementPosition = target.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-            
+
             window.scrollTo({
                 top: offsetPosition,
                 behavior: 'smooth'
@@ -552,14 +552,14 @@ function generateOrderNumber() {
 function formatOrderMessage(customerData) {
     const orderNum = generateOrderNumber();
     currentOrderNumber = orderNum;
-    
+
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     let message = `🛍️ *NOVO PEDIDO - ${CONFIG.storeName}*\n`;
     message += `━━━━━━━━━━━━━━━━━━\n\n`;
     message += `📋 *Pedido #${orderNum}*\n`;
     message += `📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
-    
+
     message += `👤 *DADOS DO CLIENTE*\n`;
     message += `Nome: ${customerData.name}\n`;
     message += `Telefone: ${customerData.phone}\n`;
@@ -567,24 +567,24 @@ function formatOrderMessage(customerData) {
     message += `\n📍 *ENDEREÇO DE ENTREGA*\n`;
     message += `${customerData.address}\n`;
     message += `${customerData.city} - CEP: ${customerData.cep}\n\n`;
-    
+
     message += `🛒 *ITENS DO PEDIDO*\n`;
     message += `━━━━━━━━━━━━━━━━━━\n`;
-    
+
     cart.forEach(item => {
         message += `▸ ${item.name}\n`;
         message += `   Tam: ${item.size} | Qtd: ${item.quantity} | ${formatPrice(item.price * item.quantity)}\n`;
     });
-    
+
     message += `━━━━━━━━━━━━━━━━━━\n`;
     message += `💰 *TOTAL: ${formatPrice(total)}*\n\n`;
-    
+
     if (customerData.notes) {
         message += `📝 *Observações:*\n${customerData.notes}\n\n`;
     }
-    
+
     message += `✨ Obrigado por comprar na ${CONFIG.storeName}!`;
-    
+
     return { message, orderNum };
 }
 
@@ -605,7 +605,7 @@ function getFormData() {
 function validateForm() {
     const required = ['customerName', 'customerPhone', 'customerAddress', 'customerCity', 'customerCep'];
     let valid = true;
-    
+
     required.forEach(id => {
         const input = document.getElementById(id);
         if (!input.value.trim()) {
@@ -615,11 +615,11 @@ function validateForm() {
             input.style.borderColor = 'var(--color-border)';
         }
     });
-    
+
     if (!valid) {
         showToast('Por favor, preencha todos os campos obrigatórios');
     }
-    
+
     return valid;
 }
 
@@ -629,10 +629,10 @@ function openCheckout() {
         showToast('Seu carrinho está vazio');
         return;
     }
-    
+
     closeCartSidebar();
     updateCheckoutSummary();
-    
+
     checkoutOverlay.classList.add('active');
     checkoutModal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -648,7 +648,7 @@ function closeCheckoutModal() {
 // Update checkout summary
 function updateCheckoutSummary() {
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     summaryItems.innerHTML = cart.map(item => `
         <div class="summary-item">
             <span class="summary-item-name">${item.name}</span>
@@ -656,55 +656,55 @@ function updateCheckoutSummary() {
             <span class="summary-item-price">${formatPrice(item.price * item.quantity)}</span>
         </div>
     `).join('');
-    
+
     summaryTotal.textContent = formatPrice(total);
 }
 
 // Send via WhatsApp
 function sendWhatsApp() {
     if (!validateForm()) return;
-    
+
     const customerData = getFormData();
     const { message, orderNum } = formatOrderMessage(customerData);
-    
+
     // Encode message for URL
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodedMessage}`;
-    
+
     // Save order to localStorage
     saveOrder(orderNum, customerData);
-    
+
     // Open WhatsApp
     window.open(whatsappUrl, '_blank');
-    
+
     // Clear cart
     clearCartAfterOrder();
     closeCheckoutModal();
-    
+
     showToast('Pedido enviado! Abrindo WhatsApp...');
 }
 
 // Send via Telegram
 async function sendTelegram() {
     if (!validateForm()) return;
-    
+
     const customerData = getFormData();
     const { message, orderNum } = formatOrderMessage(customerData);
-    
+
     // Save order (envia para Google Sheets que notifica o Telegram automaticamente)
     saveOrder(orderNum, customerData);
-    
+
     // Mostra o modal de sucesso
     showTrackingModal(orderNum);
     clearCartAfterOrder();
     closeCheckoutModal();
-    
+
     // Se Google Sheets está configurado, a notificação já foi enviada pelo Apps Script
     if (CONFIG.googleSheetsApi && CONFIG.googleSheetsApi !== 'COLE_SUA_URL_AQUI') {
         showToast('Pedido enviado com sucesso! ✅');
         return;
     }
-    
+
     // Fallback: tenta enviar direto via API (pode falhar por CORS)
     try {
         const response = await fetch(`https://api.telegram.org/bot${CONFIG.telegramBotToken}/sendMessage`, {
@@ -718,9 +718,9 @@ async function sendTelegram() {
                 parse_mode: 'Markdown'
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.ok) {
             showToast('Pedido enviado com sucesso! ✅');
         } else {
@@ -747,7 +747,7 @@ function showTrackingModal(orderNum) {
     if (orderNumber) {
         orderNumber.textContent = orderNum;
     }
-    
+
     // Update link to open order tracking page instead of Telegram
     if (telegramBotLink) {
         telegramBotLink.setAttribute('href', '#');
@@ -766,7 +766,7 @@ function showTrackingModal(orderNum) {
             Acompanhar Pedido
         `;
     }
-    
+
     if (trackingOverlay) trackingOverlay.classList.add('active');
     if (trackingModal) trackingModal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -789,15 +789,15 @@ function saveOrder(orderNum, customerData) {
         date: new Date().toISOString(),
         status: 'received'
     };
-    
+
     // Salva localmente (backup)
     const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
     orders.push(orderData);
     localStorage.setItem('atelierOrders', JSON.stringify(orders));
-    
+
     // Salva no Google Sheets
     saveOrderToGoogleSheets(orderData);
-    
+
     // Envia email de confirmação se configurado
     if (CONFIG.emailjs.enabled && customerData.email) {
         sendConfirmationEmail(orderData, customerData);
@@ -811,7 +811,7 @@ async function saveOrderToGoogleSheets(orderData) {
         console.log('Google Sheets não configurado, usando apenas localStorage');
         return;
     }
-    
+
     try {
         const response = await fetch(CONFIG.googleSheetsApi, {
             method: 'POST',
@@ -824,7 +824,7 @@ async function saveOrderToGoogleSheets(orderData) {
                 order: orderData
             })
         });
-        
+
         console.log('Pedido enviado para Google Sheets');
     } catch (error) {
         console.error('Erro ao salvar no Google Sheets:', error);
@@ -839,48 +839,48 @@ async function sendConfirmationEmail(orderData, customerData) {
         console.warn('EmailJS não carregado');
         return;
     }
-    
+
     try {
         // Inicializa EmailJS
         emailjs.init(CONFIG.emailjs.publicKey);
-        
+
         // Formata lista de itens para o email
-        const itemsList = orderData.items.map(item => 
+        const itemsList = orderData.items.map(item =>
             `• ${item.name} (Tam: ${item.size}) x${item.quantity} - ${formatPrice(item.price * item.quantity)}`
         ).join('\n');
-        
+
         // Parâmetros do template
         const templateParams = {
             // Para o cliente
             to_email: customerData.email,
             to_name: customerData.name,
-            
+
             // Dados do pedido
             order_number: orderData.orderNumber,
             order_date: new Date().toLocaleDateString('pt-BR'),
             order_items: itemsList,
             order_total: formatPrice(orderData.total),
-            
+
             // Endereço
             delivery_address: `${customerData.address}, ${customerData.city} - CEP: ${customerData.cep}`,
-            
+
             // Loja
             store_name: CONFIG.storeName,
-            
+
             // Link para acompanhar (página da loja)
             tracking_link: `${window.location.origin}${window.location.pathname}?pedido=${orderData.orderNumber}`,
-            
+
             // Email do vendedor (para cópia)
             vendor_email: CONFIG.vendorEmail
         };
-        
+
         // Envia o email
         const response = await emailjs.send(
             CONFIG.emailjs.serviceId,
             CONFIG.emailjs.templateId,
             templateParams
         );
-        
+
         if (response.status === 200) {
             console.log('Email de confirmação enviado!');
             showToast('Email de confirmação enviado! 📧');
@@ -956,12 +956,12 @@ function openOrderTracking(orderCode = null) {
     trackingResultView.style.display = 'none';
     trackingNotFoundView.style.display = 'none';
     trackingCodeInput.value = orderCode || '';
-    
+
     // If order code provided, search immediately
     if (orderCode) {
         searchOrder(orderCode);
     }
-    
+
     orderTrackingOverlay.classList.add('active');
     orderTrackingModal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -981,7 +981,7 @@ async function searchOrder(code) {
     const originalText = searchBtn.textContent;
     searchBtn.textContent = 'Buscando...';
     searchBtn.disabled = true;
-    
+
     try {
         // Tenta buscar no Google Sheets primeiro
         if (CONFIG.googleSheetsApi && CONFIG.googleSheetsApi !== 'COLE_SUA_URL_AQUI') {
@@ -993,11 +993,11 @@ async function searchOrder(code) {
                 return;
             }
         }
-        
+
         // Se não encontrou no Sheets, busca no localStorage
         const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
         const localOrder = orders.find(o => o.orderNumber.toUpperCase() === code.toUpperCase());
-        
+
         if (localOrder) {
             displayOrderDetails(localOrder);
         } else {
@@ -1008,14 +1008,14 @@ async function searchOrder(code) {
         // Fallback para localStorage
         const orders = JSON.parse(localStorage.getItem('atelierOrders')) || [];
         const localOrder = orders.find(o => o.orderNumber.toUpperCase() === code.toUpperCase());
-        
+
         if (localOrder) {
             displayOrderDetails(localOrder);
         } else {
             showNotFound();
         }
     }
-    
+
     searchBtn.textContent = originalText;
     searchBtn.disabled = false;
 }
@@ -1026,7 +1026,7 @@ async function searchOrderInGoogleSheets(code) {
         const url = `${CONFIG.googleSheetsApi}?action=getOrder&orderNumber=${encodeURIComponent(code)}`;
         const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.success && data.order) {
             return data.order;
         }
@@ -1042,10 +1042,10 @@ function displayOrderDetails(order) {
     trackingSearchView.style.display = 'none';
     trackingNotFoundView.style.display = 'none';
     trackingResultView.style.display = 'block';
-    
+
     // Update header
     document.getElementById('displayOrderNumber').textContent = order.orderNumber;
-    
+
     // Formata a data (pode vir como string do Google Sheets ou ISO do localStorage)
     let dateDisplay = order.date;
     try {
@@ -1064,7 +1064,7 @@ function displayOrderDetails(order) {
         dateDisplay = order.date;
     }
     document.getElementById('displayOrderDate').textContent = dateDisplay;
-    
+
     // Update status badge
     const statusBadge = document.getElementById('orderStatusBadge');
     const statusTexts = {
@@ -1075,10 +1075,10 @@ function displayOrderDetails(order) {
     };
     statusBadge.textContent = statusTexts[order.status] || 'Pedido Recebido';
     statusBadge.className = 'order-status-badge ' + (order.status || 'received');
-    
+
     // Update timeline
     updateTimeline(order.status || 'received');
-    
+
     // Update items list
     const itemsList = document.getElementById('orderItemsList');
     itemsList.innerHTML = order.items.map(item => `
@@ -1090,15 +1090,15 @@ function displayOrderDetails(order) {
             <span class="order-item-price">${formatPrice(item.price * item.quantity)}</span>
         </div>
     `).join('');
-    
+
     // Update total
     document.getElementById('displayOrderTotal').textContent = formatPrice(order.total);
-    
+
     // Update delivery address
     const address = order.customer;
-    document.getElementById('displayDeliveryAddress').textContent = 
+    document.getElementById('displayDeliveryAddress').textContent =
         `${address.address}, ${address.city} - CEP: ${address.cep}`;
-    
+
     // Update WhatsApp contact link
     const whatsappLink = document.getElementById('contactWhatsAppOrder');
     const message = encodeURIComponent(`Olá! Tenho uma dúvida sobre o pedido #${order.orderNumber}`);
@@ -1109,10 +1109,10 @@ function displayOrderDetails(order) {
 function updateTimeline(status) {
     const steps = ['received', 'preparing', 'shipped', 'delivered'];
     const currentIndex = steps.indexOf(status);
-    
+
     document.querySelectorAll('.timeline-step').forEach((step, index) => {
         step.classList.remove('active', 'completed');
-        
+
         if (index < currentIndex) {
             step.classList.add('completed');
         } else if (index === currentIndex) {
@@ -1198,5 +1198,4 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartUI();
     checkUrlForOrderCode();
 });
-
 
