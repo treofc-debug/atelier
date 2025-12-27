@@ -1101,8 +1101,12 @@ function displayOrderDetails(order) {
 
     // Update WhatsApp contact link
     const whatsappLink = document.getElementById('contactWhatsAppOrder');
-    const message = encodeURIComponent(`Olá! Tenho uma dúvida sobre o pedido #${order.orderNumber}`);
-    whatsappLink.href = `https://wa.me/${CONFIG.whatsappNumber}?text=${message}`;
+    if (whatsappLink) {
+        const message = encodeURIComponent(`Olá! Tenho uma dúvida sobre o pedido #${order.orderNumber}`);
+        whatsappLink.href = `https://wa.me/${CONFIG.whatsappNumber}?text=${message}`;
+        whatsappLink.setAttribute('target', '_blank');
+        whatsappLink.setAttribute('rel', 'noopener noreferrer');
+    }
 }
 
 // Update timeline based on status
