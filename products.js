@@ -29,7 +29,7 @@ const productsData = [
         badge: "PIX 15% OFF",
         image: "img/renda5.jpeg",
         // imageLocal: "img/blazer-oversized.jpg",
-        colors: ["#1A1A1A", "#F5F5DC", "#8B9A7D"],
+        colors: ["#F2E7D3"],
         sizes: ["UNICO"],
         description: "A combinação perfeita entre a leveza da renda e a elegância, feito em conchinhas tudo feito manual bordado em conchas."
     },
@@ -38,13 +38,13 @@ const productsData = [
         name: "Calça Wide Leg Cintura Alta",
         category: "calcas",
         categoryLabel: "Calças",
-        price: 349.90,
-        originalPrice: null,
-        badge: null,
-        image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80",
+        price: 198.00,
+        originalPrice: 257.90,
+        badge: "PIX 20% OFF",
+        image: "img/renda6.jpeg",
         // imageLocal: "img/calca-wide-leg.jpg",
-        colors: ["#1A1A1A", "#F5F5DC", "#5C4033"],
-        sizes: ["34", "36", "38", "40", "42", "44"],
+        colors: ["#e3dbcc"],
+        sizes: ["UNICO"],
         description: "Calça pantalona em tecido premium com caimento impecável. Cintura alta que alonga a silhueta. Versátil para looks de trabalho ou lazer."
     },
 
