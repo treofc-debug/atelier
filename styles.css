@@ -1357,9 +1357,9 @@ button {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    width: 90%;
+    width: min(900px, calc(100vw - 24px));
     max-width: 900px;
-    max-height: 90vh;
+    max-height: calc(100dvh - 24px);
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     overflow: hidden;
@@ -1397,14 +1397,17 @@ button {
 
 .modal-content {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    max-height: 90vh;
-    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .modal-image {
     aspect-ratio: 3/4;
     background: var(--color-bg-alt);
+    min-width: 0;
 }
 
 .modal-image img {
@@ -1417,6 +1420,9 @@ button {
     padding: var(--space-xl);
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-info .product-category {
@@ -1452,6 +1458,7 @@ button {
 .size-options {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .size-btn {
@@ -1607,6 +1614,10 @@ button {
     
     .modal-image {
         aspect-ratio: 4/3;
+    }
+
+    .modal-info {
+        padding: var(--space-lg);
     }
 }
 
