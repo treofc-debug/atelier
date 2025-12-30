@@ -1,5 +1,5 @@
 /**
- * ATELIER – Google Apps Script CORRIGIDO
+ * JENY Modas – Google Apps Script CORRIGIDO
  * Versão com melhorias no envio para Telegram
  * 
  * MELHORIAS IMPLEMENTADAS:
@@ -13,7 +13,7 @@
 
 const botToken = '7898087319:AAHP0XDRUN8vyaxUYANv8bZMGrD3hRLZj6o';
 const sheetId = '1XRjmWTfBps5tzt9REgdKczqTtuOWHDWTopFDoUaRd8k';
-const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbyY2z7TGO02Nsm2yKhQcA_AvipBNwOcBI1PocRdMPqoTefJCGFtQ-H-wXS_NXBcf2PD/exec';
+const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbz8I4wBh-YcMXcFXAkyczi6xYPlyGzQN_rDLj6b6mKUEXL9xdOHH8xK_U-op6mRmnSB/exec';
 const CHAT_ID = '7625866003';
 
 // Configurações de retry
@@ -272,7 +272,7 @@ function sendTelegramNotification(order) {
   });
   
   // Monta a mensagem com escape adequado
-  let message = `🛍️ *NOVO PEDIDO \\- ATELIER*\n`;
+  let message = `🛍️ *NOVO PEDIDO \\- JENY Modas*\n`;
   message += `━━━━━━━━━━━━━━━━━━\n\n`;
   message += `📋 *Pedido \\#${escapeMarkdown(orderNumber)}*\n`;
   message += `📅 Data: ${escapeMarkdown(new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))}\n\n`;
@@ -383,7 +383,7 @@ function sendSimpleTelegramNotification(order) {
   const customerName = String(order.customer?.name || 'N/A');
   const totalValue = parseFloat(order.total) || 0;
   
-  const simpleMessage = `🛍️ NOVO PEDIDO - ATELIER
+  const simpleMessage = `🛍️ NOVO PEDIDO - JENY Modas
 
 📋 Pedido: ${orderNumber}
 👤 Cliente: ${customerName}

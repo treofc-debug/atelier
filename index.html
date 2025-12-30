@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATELIER — Moda Contemporânea</title>
+    <title>JENY Modas — Moda Feminina</title>
+    <meta name="description" content="JENY Modas: novidades, destaques e peças selecionadas. Compre com segurança e acompanhe seu pedido.">
+    <meta name="theme-color" content="#FF3D7F">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#" class="logo">ATELIER</a>
+            <a href="#" class="logo">JENY <span class="logo-sub">Modas</span></a>
             <ul class="nav-links">
                 <li><a href="#colecao">Coleção</a></li>
-                <li><a href="#destaques">Destaques</a></li>
                 <li><a href="#sobre">Sobre</a></li>
                 <li><a href="#contato">Contato</a></li>
                 <li><a href="#" id="trackOrderNav" class="nav-track">📦 Meu Pedido</a></li>
@@ -49,7 +50,6 @@
     <div class="mobile-menu" id="mobileMenu">
         <ul class="mobile-nav-links">
             <li><a href="#colecao">Coleção</a></li>
-            <li><a href="#destaques">Destaques</a></li>
             <li><a href="#sobre">Sobre</a></li>
             <li><a href="#contato">Contato</a></li>
             <li><a href="#" id="trackOrderMobile" class="nav-track">📦 Meu Pedido</a></li>
@@ -59,13 +59,21 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-bg"></div>
-        <div class="hero-content">
-            <span class="hero-tag">Nova Coleção 2025</span>
-            <h1 class="hero-title">Elegância<br><em>Atemporal</em></h1>
-            <p class="hero-desc">Descubra peças exclusivas que transcendem tendências. Design sofisticado para quem valoriza qualidade e estilo único.</p>
-            <div class="hero-actions">
-                <a href="#colecao" class="btn btn-primary">Explorar Coleção</a>
-                <a href="#sobre" class="btn btn-secondary">Nossa História</a>
+        <div class="hero-inner container">
+            <div class="hero-content">
+                <span class="hero-tag">Novidades 2026</span>
+                <h1 class="hero-title">Seu estilo<br><em>do seu jeito</em></h1>
+                <p class="hero-desc">Peças selecionadas pra valorizar seu visual com conforto e presença. Explore a coleção e monte looks incríveis.</p>
+                <div class="hero-actions">
+                    <a href="#colecao" class="btn btn-primary">Explorar Coleção</a>
+                    <a href="#sobre" class="btn btn-secondary">Nossa História</a>
+                </div>
+            </div>
+
+            <!-- Visual decorativo (apenas UI) -->
+            <div class="hero-aside" aria-hidden="true">
+                <div class="hero-aside-card hero-aside-card--main"></div>
+                <div class="hero-aside-card hero-aside-card--small"></div>
             </div>
         </div>
         <div class="hero-scroll">
@@ -103,7 +111,7 @@
                     <polyline points="23 4 23 10 17 10"></polyline>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                <span>Troca em até 30 dias</span>
+                <span>Novidade Entre em Contato</span>
             </div>
         </div>
     </section>
@@ -121,7 +129,7 @@
             <div class="filter-tabs">
                 <button class="filter-tab active" data-filter="all">Todos</button>
                 <button class="filter-tab" data-filter="vestidos">Vestidos</button>
-                <button class="filter-tab" data-filter="blazers">Blazers</button>
+                <button class="filter-tab" data-filter="blazers">Praia</button>
                 <button class="filter-tab" data-filter="calcas">Calças</button>
                 <button class="filter-tab" data-filter="acessorios">Acessórios</button>
             </div>
@@ -137,64 +145,35 @@
         </div>
     </section>
 
-    <!-- Featured Section -->
-    <section class="featured" id="destaques">
-        <div class="featured-grid">
-            <div class="featured-item featured-large">
-                <div class="featured-image" style="background-image: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80')"></div>
-                <div class="featured-overlay">
-                    <span class="featured-tag">Destaque</span>
-                    <h3>Coleção Inverno</h3>
-                    <p>Texturas e tons que aquecem</p>
-                    <a href="#" class="btn btn-light">Descobrir</a>
-                </div>
-            </div>
-            <div class="featured-item">
-                <div class="featured-image" style="background-image: url('https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&q=80')"></div>
-                <div class="featured-overlay">
-                    <span class="featured-tag">Novo</span>
-                    <h3>Alfaiataria</h3>
-                    <a href="#" class="btn btn-light btn-sm">Ver mais</a>
-                </div>
-            </div>
-            <div class="featured-item">
-                <div class="featured-image" style="background-image: url('https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80')"></div>
-                <div class="featured-overlay">
-                    <span class="featured-tag">Exclusivo</span>
-                    <h3>Essenciais</h3>
-                    <a href="#" class="btn btn-light btn-sm">Ver mais</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- About Section -->
     <section class="about" id="sobre">
         <div class="container">
             <div class="about-grid">
                 <div class="about-image">
-                    <img src="https://images.unsplash.com/photo-1558171813-4c088753af8f?w=600&q=80" alt="Atelier Workshop">
+                    <img src="img/baubiquini.jpeg" alt="JENY Modas">
                     <div class="about-image-accent"></div>
                 </div>
                 <div class="about-content">
-                    <span class="section-tag">Nossa Essência</span>
-                    <h2 class="section-title">Moda com Propósito</h2>
-                    <p>Nascemos da paixão por criar peças que contam histórias. Cada detalhe é pensado para oferecer não apenas beleza, mas também conforto e durabilidade.</p>
-                    <p>Trabalhamos com fornecedores locais e materiais sustentáveis, porque acreditamos que a moda pode ser bonita e responsável.</p>
-                    <div class="about-stats">
-                        <div class="stat">
-                            <span class="stat-number">500+</span>
-                            <span class="stat-label">Clientes Satisfeitas</span>
+                    <span class="section-tag">Sobre a JENY Modas</span>
+                    <h2 class="section-title">Looks que valorizam você</h2>
+                    <p class="about-lead">Aqui você encontra peças escolhidas a dedo, com caimento bonito e aquele toque de estilo que faz diferença no dia a dia.</p>
+
+                    <div class="about-highlights">
+                        <div class="about-pill">
+                            <span class="about-pill-icon">⚡</span>
+                            <span>Envio rápido</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-number">50+</span>
-                            <span class="stat-label">Peças Exclusivas</span>
+                        <div class="about-pill">
+                            <span class="about-pill-icon">💬</span>
+                            <span>Atendimento no WhatsApp</span>
                         </div>
-                        <div class="stat">
-                            <span class="stat-number">100%</span>
-                            <span class="stat-label">Sustentável</span>
+                        <div class="about-pill about-pill--pix">
+                            <span class="about-pill-icon">💸</span>
+                            <span>PIX com destaque</span>
                         </div>
                     </div>
+
+                    <p class="about-note">Quer ajuda pra escolher tamanho ou montar look? Fale com a gente — a gente responde rapidinho.</p>
                 </div>
             </div>
         </div>
@@ -219,7 +198,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="#" class="logo">ATELIER</a>
+                    <a href="#" class="logo">JENY <span class="logo-sub">Modas</span></a>
                     <p>Moda contemporânea com alma artesanal. Peças únicas para mulheres únicas.</p>
                     <div class="social-links">
                         <a href="#" aria-label="Instagram">
@@ -246,7 +225,6 @@
                     <h4>Navegação</h4>
                     <ul>
                         <li><a href="#colecao">Coleção</a></li>
-                        <li><a href="#destaques">Destaques</a></li>
                         <li><a href="#sobre">Sobre Nós</a></li>
                         <li><a href="#">Lookbook</a></li>
                     </ul>
@@ -268,7 +246,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Atelier. Todos os direitos reservados.</p>
+                <p>&copy; 2025 JENY Modas. Todos os direitos reservados.</p>
                 <div class="payment-methods">
                     <span>Formas de pagamento:</span>
                     <div class="payment-icons">

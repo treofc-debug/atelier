@@ -1,5 +1,5 @@
 /**
- * ATELIER — Main JavaScript
+ * JENY Modas — Main JavaScript
  * Interatividade e funcionalidades da landing page
  */
 
@@ -24,7 +24,7 @@ const CONFIG = {
     telegramChatId: '7625866003',
 
     // Nome da loja
-    storeName: 'ATELIER',
+    storeName: 'JENY Modas',
 
     // ============================================
     // CONFIGURAÇÃO DE EMAIL (EmailJS - Gratuito)
@@ -107,6 +107,21 @@ let currentOrderNumber = null;
 // UTILITY FUNCTIONS
 // ============================================
 
+// Fallback automático para imagens locais:
+// se `img/src` falhar e existir `data-fallback`, troca para o fallback.
+function applyImageFallback(root = document) {
+    root.querySelectorAll('img[data-fallback]').forEach(img => {
+        const fallback = img.getAttribute('data-fallback');
+        if (!fallback) return;
+
+        img.addEventListener('error', () => {
+            // evita loop se o fallback também falhar
+            img.removeAttribute('data-fallback');
+            img.src = fallback;
+        }, { once: true });
+    });
+}
+
 // Format currency to BRL
 function formatPrice(price) {
     return price.toLocaleString('pt-BR', {
@@ -169,11 +184,16 @@ function renderProducts(filter = 'all') {
         ? productsData
         : productsData.filter(p => p.category === filter);
 
-    productsGrid.innerHTML = filteredProducts.map((product, index) => `
+    productsGrid.innerHTML = filteredProducts.map((product, index) => {
+        const src = product.imageLocal || product.image;
+        const fallbackAttr = (product.imageLocal && product.image) ? `data-fallback="${product.image}"` : '';
+        const badge = getBadgeData(product);
+
+        return `
         <article class="product-card" data-id="${product.id}" style="animation-delay: ${index * 0.1}s">
             <div class="product-image">
-                <img src="${product.image}" alt="${product.name}" loading="lazy">
-                ${product.badge ? `<span class="product-badge ${product.badge}">${getBadgeText(product.badge)}</span>` : ''}
+                <img src="${src}" ${fallbackAttr} alt="${product.name}" loading="lazy">
+                ${badge.type ? `<span class="product-badge ${badge.type}">${badge.text}</span>` : ''}
                 <div class="product-actions">
                     <button class="btn quick-view-btn" data-id="${product.id}">Ver Detalhes</button>
                     <button class="btn btn-wishlist" aria-label="Favoritar">
@@ -187,6 +207,7 @@ function renderProducts(filter = 'all') {
                 <span class="product-category">${product.categoryLabel}</span>
                 <h3 class="product-name">${product.name}</h3>
                 <div class="product-price">
+                    <span class="price-pix" title="Pagamento via PIX">PIX</span>
                     <span class="current">${formatPrice(product.price)}</span>
                     ${product.originalPrice ? `<span class="original">${formatPrice(product.originalPrice)}</span>` : ''}
                 </div>
@@ -197,7 +218,8 @@ function renderProducts(filter = 'all') {
                 </div>
             </div>
         </article>
-    `).join('');
+        `;
+    }).join('');
 
     // Add event listeners to quick view buttons
     document.querySelectorAll('.quick-view-btn').forEach(btn => {
@@ -207,6 +229,9 @@ function renderProducts(filter = 'all') {
             openQuickView(productId);
         });
     });
+
+    // Caso `imageLocal` esteja configurado e falhe, cai para a imagem remota
+    applyImageFallback(productsGrid);
 }
 
 // Get badge text
@@ -217,6 +242,23 @@ function getBadgeText(badge) {
         'limited': 'Limitado'
     };
     return badges[badge] || badge;
+}
+
+// Normaliza badge para suportar textos livres (ex.: "10% OFF") sem quebrar CSS/classes
+function getBadgeData(product) {
+    const allowedTypes = ['new', 'sale', 'limited'];
+
+    const raw = product?.badge;
+    const typeFromRaw = allowedTypes.includes(raw) ? raw : null;
+    const typeFromProp = allowedTypes.includes(product?.badgeType) ? product.badgeType : null;
+    const type = typeFromRaw || typeFromProp || (raw ? 'custom' : null);
+
+    const text =
+        product?.badgeText ||
+        product?.badgeLabel ||
+        (raw ? getBadgeText(raw) : '');
+
+    return { type, text };
 }
 
 // Filter tabs functionality
@@ -239,14 +281,18 @@ function openQuickView(productId) {
 
     selectedSize = null;
 
+    const imgSrc = product.imageLocal || product.image;
+    const imgFallbackAttr = (product.imageLocal && product.image) ? `data-fallback="${product.image}"` : '';
+
     modalContent.innerHTML = `
         <div class="modal-image">
-            <img src="${product.image}" alt="${product.name}">
+            <img src="${imgSrc}" ${imgFallbackAttr} alt="${product.name}">
         </div>
         <div class="modal-info">
             <span class="product-category">${product.categoryLabel}</span>
             <h2 class="product-name">${product.name}</h2>
             <div class="product-price">
+                <span class="price-pix" title="Pagamento via PIX">PIX</span>
                 <span class="current">${formatPrice(product.price)}</span>
                 ${product.originalPrice ? `<span class="original">${formatPrice(product.originalPrice)}</span>` : ''}
             </div>
@@ -311,6 +357,8 @@ function openQuickView(productId) {
     modalOverlay.classList.add('active');
     quickViewModal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    applyImageFallback(modalContent);
 }
 
 function closeQuickView() {
@@ -359,7 +407,7 @@ function updateCartUI() {
     cartItems.innerHTML = cart.map(item => `
         <div class="cart-item" data-id="${item.id}" data-size="${item.size}">
             <div class="cart-item-image">
-                <img src="${item.image}" alt="${item.name}">
+                <img src="${item.image}" ${item.imageFallback ? `data-fallback="${item.imageFallback}"` : ''} alt="${item.name}">
             </div>
             <div class="cart-item-info">
                 <h4 class="cart-item-name">${item.name}</h4>
@@ -393,6 +441,8 @@ function updateCartUI() {
             removeFromCart(parseInt(btn.dataset.id), btn.dataset.size);
         });
     });
+
+    applyImageFallback(cartItems);
 }
 
 function addToCart(productId, size) {
@@ -404,11 +454,14 @@ function addToCart(productId, size) {
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
+        const imgSrc = product.imageLocal || product.image;
+        const imgFallback = (product.imageLocal && product.image) ? product.image : null;
         cart.push({
             id: product.id,
             name: product.name,
             price: product.price,
-            image: product.image,
+            image: imgSrc,
+            imageFallback: imgFallback,
             size: size,
             quantity: 1
         });
