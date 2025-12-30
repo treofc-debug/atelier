@@ -22,8 +22,8 @@ const productsData = [
     {
         id: 2,
         name: "Look Pérola do Oriente",
-        category: "blazers",
-        categoryLabel: "Blazers",
+        category: "praia",
+        categoryLabel: "Praia",
         price: 237.00,
         originalPrice: 279.00,
         badge: "PIX 15% OFF",
@@ -35,17 +35,17 @@ const productsData = [
     },
     {
         id: 3,
-        name: "Calça Wide Leg Cintura Alta",
-        category: "calcas",
-        categoryLabel: "Calças",
-        price: 198.00,
-        originalPrice: 257.90,
+        name: "Conjunto Glow Off-White",
+        category: "praia",
+        categoryLabel: "Praia",
+        price: 189.00,
+        originalPrice: 237.00,
         badge: "PIX 20% OFF",
         image: "img/renda6.jpeg",
         // imageLocal: "img/calca-wide-leg.jpg",
         colors: ["#e3dbcc"],
         sizes: ["UNICO"],
-        description: "Calça pantalona em tecido premium com caimento impecável. Cintura alta que alonga a silhueta. Versátil para looks de trabalho ou lazer."
+        description: "Conjunto composto por biquíni ricamente detalhado com aplicações e saída de praia em renda premium."
     },
 
 ];

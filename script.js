@@ -9,7 +9,7 @@
 const CONFIG = {
     // Número do WhatsApp do vendedor (com código do país, sem +)
     // Exemplo: 5511999999999 (55 = Brasil, 11 = DDD, resto = número)
-    whatsappNumber: '5511999999999',
+    whatsappNumber: '5511992550020',
 
     // Username do bot do Telegram (sem @)
     // Crie um bot no @BotFather do Telegram
