@@ -709,6 +709,35 @@ button {
     transform: scale(1.05);
 }
 
+.product-card.is-sold .product-image img {
+    filter: saturate(0.75) contrast(0.95) brightness(0.85);
+}
+
+.sold-banner {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    width: 110%;
+    padding: 0.7rem 0.9rem;
+    background: rgba(220, 38, 38, 0.92);
+    color: #fff;
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255,255,255,0.25);
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 14px 28px rgba(220, 38, 38, 0.22);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.sold-banner--modal {
+    top: 50%;
+    width: 120%;
+}
+
 .product-badge {
     position: absolute;
     top: 14px;

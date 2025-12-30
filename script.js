@@ -49,7 +49,7 @@ const CONFIG = {
     // GOOGLE SHEETS (Banco de Dados)
     // ============================================
     // Após implantar o Google Apps Script, cole a URL aqui
-    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbz8I4wBh-YcMXcFXAkyczi6xYPlyGzQN_rDLj6b6mKUEXL9xdOHH8xK_U-op6mRmnSB/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
+    googleSheetsApi: 'https://script.google.com/macros/s/AKfycbz9eUGMhi6qjwxrMEvM9dRY6fPCMg2XN9l45N6ZrBraabyRL5gEZOb3bXSZJeMcXgjZ/exec' // Ex: https://script.google.com/macros/s/xxxxx/exec
 };
 
 // ============================================
@@ -102,6 +102,7 @@ let cart = JSON.parse(localStorage.getItem('atelierCart')) || [];
 let currentFilter = 'all';
 let selectedSize = null;
 let currentOrderNumber = null;
+let productSoldMap = {}; // { [productId]: true/false }
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -120,6 +121,47 @@ function applyImageFallback(root = document) {
             img.src = fallback;
         }, { once: true });
     });
+}
+
+function isProductSold(productId) {
+    const pid = String(productId);
+    if (productSoldMap[pid]) return true;
+    // fallback por nome (quando não existe id no pedido/planilha)
+    const product = productsData.find(p => String(p.id) === pid);
+    if (product) {
+        const key = slugify(product.name);
+        return !!productSoldMap[key];
+    }
+    return false;
+}
+
+function slugify(text) {
+    return String(text || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 32);
+}
+
+async function fetchProductStatuses() {
+    if (!CONFIG.googleSheetsApi || CONFIG.googleSheetsApi === 'COLE_SUA_URL_AQUI') return;
+
+    try {
+        const url = `${CONFIG.googleSheetsApi}?action=getProductsStatus`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data && data.success && data.products) {
+            const map = {};
+            Object.keys(data.products).forEach(pid => {
+                map[String(pid)] = !!data.products[pid].sold;
+            });
+            productSoldMap = map;
+        }
+    } catch (e) {
+        // silencioso: se falhar, site continua funcional
+    }
 }
 
 // Format currency to BRL
@@ -188,12 +230,14 @@ function renderProducts(filter = 'all') {
         const src = product.imageLocal || product.image;
         const fallbackAttr = (product.imageLocal && product.image) ? `data-fallback="${product.image}"` : '';
         const badge = getBadgeData(product);
+        const sold = isProductSold(product.id);
 
         return `
-        <article class="product-card" data-id="${product.id}" style="animation-delay: ${index * 0.1}s">
+        <article class="product-card ${sold ? 'is-sold' : ''}" data-id="${product.id}" style="animation-delay: ${index * 0.1}s">
             <div class="product-image">
                 <img src="${src}" ${fallbackAttr} alt="${product.name}" loading="lazy">
                 ${badge.type ? `<span class="product-badge ${badge.type}">${badge.text}</span>` : ''}
+                ${sold ? `<div class="sold-banner" aria-label="Produto vendido">VENDIDO</div>` : ''}
                 <div class="product-actions">
                     <button class="btn quick-view-btn" data-id="${product.id}">Ver Detalhes</button>
                     <button class="btn btn-wishlist" aria-label="Favoritar">
@@ -283,10 +327,12 @@ function openQuickView(productId) {
 
     const imgSrc = product.imageLocal || product.image;
     const imgFallbackAttr = (product.imageLocal && product.image) ? `data-fallback="${product.image}"` : '';
+    const sold = isProductSold(product.id);
 
     modalContent.innerHTML = `
         <div class="modal-image">
             <img src="${imgSrc}" ${imgFallbackAttr} alt="${product.name}">
+            ${sold ? `<div class="sold-banner sold-banner--modal" aria-label="Produto vendido">VENDIDO</div>` : ''}
         </div>
         <div class="modal-info">
             <span class="product-category">${product.categoryLabel}</span>
@@ -317,13 +363,13 @@ function openQuickView(productId) {
             </div>
             
             <div class="modal-actions">
-                <button class="btn btn-primary add-to-cart-modal" data-id="${product.id}">
+                <button class="btn btn-primary add-to-cart-modal" data-id="${product.id}" ${sold ? 'disabled aria-disabled="true"' : ''}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <path d="M16 10a4 4 0 0 1-8 0"></path>
                     </svg>
-                    Adicionar ao Carrinho
+                    ${sold ? 'Vendido' : 'Adicionar ao Carrinho'}
                 </button>
                 <button class="btn btn-secondary btn-wishlist-modal">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -336,6 +382,11 @@ function openQuickView(productId) {
 
     // Size selection
     modalContent.querySelectorAll('.size-btn').forEach(btn => {
+        if (sold) {
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+            return;
+        }
         btn.addEventListener('click', () => {
             modalContent.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -345,6 +396,10 @@ function openQuickView(productId) {
 
     // Add to cart from modal
     modalContent.querySelector('.add-to-cart-modal').addEventListener('click', () => {
+        if (sold) {
+            showToast('Produto vendido');
+            return;
+        }
         if (!selectedSize) {
             showToast('Por favor, selecione um tamanho');
             return;
@@ -448,6 +503,10 @@ function updateCartUI() {
 function addToCart(productId, size) {
     const product = productsData.find(p => p.id === productId);
     if (!product) return;
+    if (isProductSold(productId)) {
+        showToast('Produto vendido');
+        return;
+    }
 
     const existingItem = cart.find(item => item.id === productId && item.size === size);
 
@@ -1254,5 +1313,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProducts();
     updateCartUI();
     checkUrlForOrderCode();
+    
+    // Busca status de vendidos e re-renderiza a grade para refletir (sem quebrar o site se falhar)
+    fetchProductStatuses().then(() => {
+        renderProducts(currentFilter);
+    });
 });
 

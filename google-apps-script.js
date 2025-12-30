@@ -13,7 +13,7 @@
 
 const botToken = '7898087319:AAHP0XDRUN8vyaxUYANv8bZMGrD3hRLZj6o';
 const sheetId = '1XRjmWTfBps5tzt9REgdKczqTtuOWHDWTopFDoUaRd8k';
-const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbz8I4wBh-YcMXcFXAkyczi6xYPlyGzQN_rDLj6b6mKUEXL9xdOHH8xK_U-op6mRmnSB/exec';
+const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbz9eUGMhi6qjwxrMEvM9dRY6fPCMg2XN9l45N6ZrBraabyRL5gEZOb3bXSZJeMcXgjZ/exec';
 const CHAT_ID = '7625866003';
 
 // Configurações de retry
@@ -23,6 +23,17 @@ const RETRY_DELAY = 2000; // 2 segundos
 // Nomes das abas
 const SHEET_PEDIDOS = 'Pedidos';
 const SHEET_ITENS = 'Itens';
+const SHEET_PRODUTOS = 'Produtos';
+
+// Slug simples para usar como chave quando não existir Produto ID numérico
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^a-z0-9]+/g, '-') // troca por hífen
+    .replace(/^-+|-+$/g, '')     // trim hífens
+    .substring(0, 32);           // limite seguro pro callback_data
+}
 
 // Inicializa as abas se não existirem
 function initSheets() {
@@ -44,11 +55,34 @@ function initSheets() {
   let itensSheet = ss.getSheetByName(SHEET_ITENS);
   if (!itensSheet) {
     itensSheet = ss.insertSheet(SHEET_ITENS);
-    itensSheet.getRange(1, 1, 1, 6).setValues([[
-      'Código Pedido', 'Produto', 'Tamanho', 'Quantidade', 'Preço Unit.', 'Subtotal'
+    itensSheet.getRange(1, 1, 1, 7).setValues([[
+      'Código Pedido', 'Produto', 'Tamanho', 'Quantidade', 'Preço Unit.', 'Subtotal', 'Produto ID'
     ]]);
-    itensSheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+    itensSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
     itensSheet.setFrozenRows(1);
+  } else {
+    // Garante coluna "Produto ID" sem quebrar planilhas antigas
+    const lastCol = itensSheet.getLastColumn();
+    if (lastCol < 7) {
+      itensSheet.insertColumnAfter(lastCol);
+      itensSheet.getRange(1, 7).setValue('Produto ID').setFontWeight('bold');
+    } else {
+      const header = String(itensSheet.getRange(1, 7).getValue() || '');
+      if (!header) {
+        itensSheet.getRange(1, 7).setValue('Produto ID').setFontWeight('bold');
+      }
+    }
+  }
+
+  // Aba de Produtos (controle vendido/disponível)
+  let produtosSheet = ss.getSheetByName(SHEET_PRODUTOS);
+  if (!produtosSheet) {
+    produtosSheet = ss.insertSheet(SHEET_PRODUTOS);
+    produtosSheet.getRange(1, 1, 1, 4).setValues([[
+      'Produto ID', 'Nome', 'Vendido', 'Atualizado em'
+    ]]);
+    produtosSheet.getRange(1, 1, 1, 4).setFontWeight('bold');
+    produtosSheet.setFrozenRows(1);
   }
   
   return ss;
@@ -70,6 +104,9 @@ function doPost(e) {
       return saveOrder(data.order);
     } else if (data.action === 'updateStatus') {
       return updateOrderStatus(data.orderNumber, data.status);
+    } else if (data.action === 'setProductStatus') {
+      // opcional: endpoint admin (não usado pelo site hoje)
+      return setProductStatus(String(data.productId || ''), !!data.sold, data.productName || '');
     }
     
     return jsonResponse({ success: false, error: 'Ação inválida' });
@@ -88,6 +125,8 @@ function doGet(e) {
       return getOrder(e.parameter.orderNumber);
     } else if (action === 'getAllOrders') {
       return getAllOrders();
+    } else if (action === 'getProductsStatus') {
+      return getProductsStatus();
     } else if (action === 'init') {
       initSheets();
       return jsonResponse({ success: true, message: 'Planilha inicializada!' });
@@ -136,13 +175,15 @@ function saveOrder(order) {
     // Adiciona os itens
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach(item => {
+        const productKey = String(item.id || item.productId || item.sku || '').trim() || slugify(item.name || 'produto');
         itensSheet.appendRow([
           order.orderNumber || 'N/A',
           item.name || 'Produto',
           item.size || 'N/A',
           item.quantity || 1,
           item.price || 0,
-          (item.price || 0) * (item.quantity || 1)
+          (item.price || 0) * (item.quantity || 1),
+          productKey
         ]);
       });
       console.log('✓ Itens salvos no Google Sheets');
@@ -311,6 +352,7 @@ function sendTelegramNotification(order) {
   
   // Botões inline para atualizar status
   const shortOrderNum = orderNumber.substring(0, 20);
+  const soldMap = getProductsSoldMap(); // { [id]: true/false }
   
   let keyboard = {
     inline_keyboard: [
@@ -324,6 +366,26 @@ function sendTelegramNotification(order) {
       ]
     ]
   };
+  
+  // Botões por produto (Vendido/Disponível)
+  if (order.items && Array.isArray(order.items)) {
+    const seen = {};
+    order.items.forEach(item => {
+      const pidRaw = String(item.id || item.productId || item.sku || '').trim();
+      const pid = pidRaw || slugify(item.name || 'produto');
+      if (!pid || seen[pid]) return;
+      seen[pid] = true;
+      
+      const name = String(item.name || 'Produto');
+      const shortName = name.length > 22 ? (name.substring(0, 22) + '…') : name;
+      const isSold = !!soldMap[pid];
+      const label = isSold ? `🔴 VENDIDO: ${shortName}` : `🟢 DISPONÍVEL: ${shortName}`;
+      const nextCmd = isSold ? 'avail' : 'sold';
+      keyboard.inline_keyboard.push([
+        { text: label, callback_data: `prd:${shortOrderNum}:${pid}:${nextCmd}` }
+      ]);
+    });
+  }
   
   // Adiciona botão WhatsApp apenas se tiver telefone válido
   if (customerPhone && customerPhone.length >= 10) {
@@ -553,6 +615,156 @@ function getAllOrders() {
   return jsonResponse({ success: true, orders: orders });
 }
 
+// ============================
+// PRODUTOS: vendido/disponível
+// ============================
+
+function getProductsStatus() {
+  try {
+    initSheets();
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName(SHEET_PRODUTOS);
+    if (!sheet) return jsonResponse({ success: true, products: {} });
+    
+    const values = sheet.getDataRange().getValues();
+    const products = {};
+    
+    for (let i = 1; i < values.length; i++) {
+      const pid = String(values[i][0] || '').trim();
+      if (!pid) continue;
+      const name = String(values[i][1] || '');
+      const sold = String(values[i][2] || '').toLowerCase() === 'true' || values[i][2] === true;
+      const updatedAt = values[i][3] || '';
+      products[pid] = { sold: sold, name: name, updatedAt: updatedAt };
+    }
+    
+    return jsonResponse({ success: true, products: products });
+  } catch (error) {
+    console.error('Erro getProductsStatus:', error.toString());
+    return jsonResponse({ success: false, error: error.message });
+  }
+}
+
+function getProductsSoldMap() {
+  try {
+    initSheets();
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName(SHEET_PRODUTOS);
+    if (!sheet) return {};
+    
+    const values = sheet.getDataRange().getValues();
+    const map = {};
+    for (let i = 1; i < values.length; i++) {
+      const pid = String(values[i][0] || '').trim();
+      if (!pid) continue;
+      const sold = String(values[i][2] || '').toLowerCase() === 'true' || values[i][2] === true;
+      map[pid] = sold;
+    }
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+function setProductStatus(productId, sold, productName) {
+  try {
+    const pid = String(productId || '').trim();
+    if (!pid) return jsonResponse({ success: false, error: 'Produto inválido' });
+    
+    initSheets();
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName(SHEET_PRODUTOS);
+    const values = sheet.getDataRange().getValues();
+    
+    const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const soldValue = sold ? true : false;
+    const nameValue = String(productName || '');
+    
+    for (let i = 1; i < values.length; i++) {
+      const rowPid = String(values[i][0] || '').trim();
+      if (rowPid === pid) {
+        // atualiza
+        sheet.getRange(i + 1, 2).setValue(nameValue || values[i][1] || '');
+        sheet.getRange(i + 1, 3).setValue(soldValue);
+        sheet.getRange(i + 1, 4).setValue(now);
+        return true;
+      }
+    }
+    
+    // cria
+    sheet.appendRow([pid, nameValue, soldValue, now]);
+    return true;
+  } catch (error) {
+    console.error('Erro setProductStatus:', error.toString());
+    return false;
+  }
+}
+
+function getOrderProductRows(orderShort) {
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName(SHEET_ITENS);
+    if (!sheet) return [];
+    
+    const values = sheet.getDataRange().getValues();
+    const result = [];
+    const seen = {};
+    const clean = String(orderShort || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+    
+    for (let i = 1; i < values.length; i++) {
+      const rowOrder = String(values[i][0] || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+      const match = rowOrder.includes(clean) || clean.includes(rowOrder);
+      if (!match) continue;
+      
+      const name = String(values[i][1] || 'Produto');
+      const pid = String(values[i][6] || '').trim(); // col 7 = Produto ID
+      if (!pid || seen[pid]) continue;
+      seen[pid] = true;
+      result.push({ id: pid, name: name });
+    }
+    return result;
+  } catch (e) {
+    return [];
+  }
+}
+
+function getProductNameFromOrder(orderShort, productId) {
+  const pid = String(productId || '').trim();
+  if (!pid) return '';
+  const rows = getOrderProductRows(orderShort);
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i].id) === pid) return rows[i].name;
+  }
+  return '';
+}
+
+function getOrderStatus(orderShort) {
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const pedidosSheet = ss.getSheetByName(SHEET_PEDIDOS);
+    if (!pedidosSheet) return { statusText: 'Pedido Recebido', emoji: '📋' };
+    
+    const data = pedidosSheet.getDataRange().getValues();
+    const clean = String(orderShort || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+    
+    for (let i = 1; i < data.length; i++) {
+      const rowOrder = String(data[i][0] || '').replace(/^(TEST-|#)/i, '').toUpperCase();
+      const match = rowOrder.includes(clean) || clean.includes(rowOrder);
+      if (!match) continue;
+      const statusText = String(data[i][2] || 'Pedido Recebido');
+      const emoji =
+        statusText.includes('Prepar') ? '📦' :
+        statusText.includes('Enviad') ? '🚚' :
+        statusText.includes('Entreg') ? '✅' :
+        statusText.includes('Cancel') ? '❌' : '📋';
+      return { statusText: statusText, emoji: emoji };
+    }
+    return { statusText: 'Pedido Recebido', emoji: '📋' };
+  } catch (e) {
+    return { statusText: 'Pedido Recebido', emoji: '📋' };
+  }
+}
+
 // Processa os callbacks dos botões do Telegram
 function processCallback(update) {
   console.log('═══════════════════════════════════════');
@@ -585,6 +797,39 @@ function processCallback(update) {
   // Parse do callback: st:ORDER_NUMBER:STATUS_CODE
   const parts = callbackData.split(':');
   console.log('🔍 Partes do callback:', parts);
+  
+  // Produto vendido/disponível: prd:ORDER_SHORT:PRODUCT_ID:(sold|avail)
+  if (parts[0] === 'prd') {
+    if (parts.length < 4) {
+      answerCallback(callbackId, 'Erro: dados do produto incompletos');
+      return;
+    }
+    
+    const orderShort = parts[1];
+    const productId = String(parts[2] || '').trim();
+    const cmd = parts[3];
+    
+    if (!productId) {
+      answerCallback(callbackId, 'Erro: produto inválido');
+      return;
+    }
+    
+    const sold = cmd === 'sold';
+    const productName = getProductNameFromOrder(orderShort, productId) || '';
+    const ok = setProductStatus(productId, sold, productName);
+    
+    if (ok) {
+      answerCallback(callbackId, sold ? '🔴 Produto marcado como VENDIDO' : '🟢 Produto marcado como DISPONÍVEL');
+    } else {
+      answerCallback(callbackId, '⚠️ Não foi possível atualizar o produto');
+    }
+    
+    // Atualiza teclado (mantém também os botões de status do pedido)
+    const phone = getCustomerPhone(orderShort);
+    const current = getOrderStatus(orderShort);
+    updateMessageStatus(chatId, messageId, orderShort, current.statusText, current.emoji, phone);
+    return;
+  }
   
   if (parts[0] !== 'st') {
     console.log('⚠️ Callback não é de status:', parts[0]);
@@ -803,6 +1048,24 @@ function updateMessageStatus(chatId, messageId, orderNumber, statusText, emoji, 
       ]
     ]
   };
+  
+  // Botões por produto (Vendido/Disponível)
+  const productRows = getOrderProductRows(shortOrderNum); // [{id,name}]
+  const soldMap = getProductsSoldMap();
+  if (productRows && productRows.length) {
+    productRows.forEach(p => {
+      const pid = String(p.id || '').trim();
+      if (!pid) return;
+      const name = String(p.name || 'Produto');
+      const shortName = name.length > 22 ? (name.substring(0, 22) + '…') : name;
+      const isSold = !!soldMap[pid];
+      const label = isSold ? `🔴 VENDIDO: ${shortName}` : `🟢 DISPONÍVEL: ${shortName}`;
+      const nextCmd = isSold ? 'avail' : 'sold';
+      keyboard.inline_keyboard.push([
+        { text: label, callback_data: `prd:${shortOrderNum}:${pid}:${nextCmd}` }
+      ]);
+    });
+  }
   
   // Mantém o botão do WhatsApp se tiver telefone válido
   if (customerPhone && customerPhone.length >= 10) {
