@@ -696,6 +696,7 @@ button {
     aspect-ratio: 3/4;
     overflow: hidden;
     background: var(--color-bg-alt);
+    cursor: pointer; /* Indica que é clicável */
 }
 
 .product-image img {
@@ -1369,11 +1370,19 @@ button {
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.8);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
     z-index: 1200;
+    
+    /* SOLUÇÃO: display flex permite que o scroll funcione corretamente */
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto !important;
+    padding: 40px 10px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-overlay.active {
@@ -1382,16 +1391,20 @@ button {
 }
 
 .modal {
+    /* IMPORTANTE: o modal NÃO está dentro do overlay (são irmãos no HTML),
+       então o scroll precisa funcionar no próprio modal. */
     position: fixed;
-    top: 50%;
+    top: 40px;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    width: min(900px, calc(100vw - 24px));
-    max-width: 900px;
-    max-height: calc(100dvh - 24px);
+    transform: translateX(-50%);
+    flex-shrink: 0; /* Impede o modal de encolher */
+    margin: 0;
+    width: min(900px, calc(100vw - 20px));
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100dvh - 80px);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
@@ -1401,7 +1414,6 @@ button {
 .modal.active {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
 }
 
 .modal-close {
@@ -1426,32 +1438,36 @@ button {
 
 .modal-content {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-    overflow-x: hidden;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
 }
 
 .modal-image {
-    aspect-ratio: 3/4;
     background: var(--color-bg-alt);
-    min-width: 0;
 }
 
 .modal-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
+}
+
+/* Quick View: manter proporção da imagem (sem cortar) */
+.modal#quickViewModal .modal-image {
+    overflow: hidden;
+    background: var(--color-bg-alt);
+}
+
+.modal#quickViewModal .modal-image img {
+    object-fit: contain;
+    background: var(--color-bg-alt);
 }
 
 .modal-info {
     padding: var(--space-xl);
     display: flex;
     flex-direction: column;
-    min-width: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .modal-info .product-category {
@@ -1519,6 +1535,119 @@ button {
 
 .modal-actions .btn {
     flex: 1;
+}
+
+/* ============================================
+   IMAGE LIGHTBOX (Visualização em Tela Cheia)
+   ============================================ */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.image-lightbox.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 3001;
+    color: white;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.lightbox-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.lightbox-content img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    animation: lightboxZoomIn 0.3s ease;
+}
+
+@keyframes lightboxZoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Indicador de zoom na imagem do modal */
+.modal-image {
+    cursor: zoom-in;
+    position: relative;
+}
+
+.modal-image::after {
+    content: '🔍';
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.modal-image:hover::after {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .modal-image::after {
+        opacity: 0.8;
+        bottom: 8px;
+        right: 8px;
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
 }
 
 /* ============================================
@@ -1637,16 +1766,183 @@ button {
         flex-direction: column;
     }
     
-    .modal-content {
-        grid-template-columns: 1fr;
-    }
-    
-    .modal-image {
-        aspect-ratio: 4/3;
+    /* ====================================
+       QUICK VIEW MODAL - MOBILE OTIMIZADO
+       ==================================== */
+    .modal-overlay {
+        padding: 0;
+        align-items: flex-start;
     }
 
-    .modal-info {
-        padding: var(--space-lg);
+    .modal#quickViewModal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        margin: 0;
+        border-radius: 0;
+        transform: none !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal#quickViewModal .modal-content {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
+
+    /* Imagem - proporção mantida */
+    .modal#quickViewModal .modal-image {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+        max-height: 50vh;
+        background: linear-gradient(135deg, #f8f8f8 0%, #e8e8e8 100%);
+        flex-shrink: 0;
+    }
+
+    .modal#quickViewModal .modal-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+    }
+
+    /* Área de informações - texto legível */
+    .modal#quickViewModal .modal-info {
+        flex: 1;
+        padding: 1.25rem 1rem 6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Categoria */
+    .modal#quickViewModal .modal-info .product-category {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-accent);
+        margin-bottom: 0;
+    }
+
+    /* Nome do produto */
+    .modal#quickViewModal .modal-info .product-name {
+        font-size: 1.35rem;
+        line-height: 1.25;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+
+    /* Preço */
+    .modal#quickViewModal .modal-info .product-price {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal#quickViewModal .modal-info .product-price .current {
+        font-weight: 700;
+        color: var(--color-text);
+    }
+
+    .modal#quickViewModal .modal-info .product-price .original {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        text-decoration: line-through;
+    }
+
+    /* Descrição */
+    .modal#quickViewModal .modal-info .product-desc {
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: var(--color-text-muted);
+        margin-bottom: 0.75rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+
+    /* Tamanhos */
+    .modal#quickViewModal .modal-sizes {
+        margin-bottom: 0.5rem;
+    }
+
+    .modal#quickViewModal .modal-sizes h4 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--color-text);
+    }
+
+    .modal#quickViewModal .size-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .modal#quickViewModal .size-btn {
+        min-width: 48px;
+        height: 40px;
+        font-size: 0.8rem;
+        padding: 0 0.75rem;
+    }
+
+    /* Cores */
+    .modal#quickViewModal .product-colors h4 {
+        font-size: 0.8rem !important;
+    }
+
+    /* Botões de ação - fixos no rodapé */
+    .modal#quickViewModal .modal-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        background: var(--color-surface);
+        border-top: 1px solid var(--color-border-light);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 0.75rem;
+        z-index: 10;
+    }
+
+    .modal#quickViewModal .modal-actions .btn {
+        flex: 1;
+        padding: 0.875rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .modal#quickViewModal .modal-actions .btn-wishlist-modal {
+        flex: 0 0 auto;
+        width: 48px;
+        padding: 0;
+    }
+
+    /* Botão fechar */
+    .modal#quickViewModal .modal-close {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 20;
     }
 }
 
@@ -1661,6 +1957,20 @@ button {
     
     .cart-sidebar {
         max-width: 100%;
+    }
+
+    /* Ajustes extras para telas muito pequenas */
+    .modal#quickViewModal .modal-info .product-name {
+        font-size: 1.2rem;
+    }
+
+    .modal#quickViewModal .modal-info .product-desc {
+        font-size: 0.8125rem;
+    }
+
+    .modal#quickViewModal .modal-image {
+        min-height: 220px;
+        max-height: 40vh;
     }
 }
 
@@ -1691,11 +2001,19 @@ button {
 .tracking-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.8);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
     z-index: 1300;
+    
+    /* SOLUÇÃO: display flex permite que o scroll funcione corretamente */
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto !important;
+    padding: 40px 10px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .checkout-overlay.active,
@@ -1707,15 +2025,17 @@ button {
 .checkout-modal,
 .tracking-modal {
     position: fixed;
-    top: 50%;
+    top: 40px;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    width: 95%;
-    max-width: 600px;
-    max-height: 95vh;
+    transform: translateX(-50%);
+    flex-shrink: 0;
+    margin: 0;
+    width: min(600px, calc(100vw - 20px));
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100dvh - 80px);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
@@ -1726,14 +2046,12 @@ button {
 .tracking-modal.active {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
 }
 
 .checkout-content,
 .tracking-content {
     padding: var(--space-xl);
-    max-height: 95vh;
-    overflow-y: auto;
+    /* Removido max-height e overflow para deixar o scroll ser controlado pelo fundo (overlay) */
 }
 
 .checkout-header {
@@ -2065,11 +2383,19 @@ button {
 .order-tracking-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.8);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
     z-index: 1400;
+    
+    /* SOLUÇÃO: display flex permite que o scroll funcione corretamente */
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto !important;
+    padding: 40px 10px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .order-tracking-overlay.active {
@@ -2079,15 +2405,17 @@ button {
 
 .order-tracking-modal {
     position: fixed;
-    top: 50%;
+    top: 40px;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    width: 95%;
-    max-width: 550px;
-    max-height: 90vh;
+    transform: translateX(-50%);
+    flex-shrink: 0;
+    margin: 0;
+    width: min(550px, calc(100vw - 20px));
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(100dvh - 80px);
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-base);
@@ -2097,13 +2425,10 @@ button {
 .order-tracking-modal.active {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
 }
 
 .order-tracking-content {
     padding: var(--space-xl);
-    max-height: 90vh;
-    overflow-y: auto;
 }
 
 /* Search View */

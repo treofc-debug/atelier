@@ -274,6 +274,22 @@ function renderProducts(filter = 'all') {
         });
     });
 
+    // Add event listeners to product images (click to open details)
+    document.querySelectorAll('.product-card .product-image').forEach(imgContainer => {
+        imgContainer.addEventListener('click', (e) => {
+            // Ignora se clicou no botão de favoritar ou no próprio botão Ver Detalhes
+            if (e.target.closest('.quick-view-btn') || e.target.closest('.btn-wishlist')) {
+                return;
+            }
+            e.preventDefault();
+            const card = imgContainer.closest('.product-card');
+            if (card) {
+                const productId = parseInt(card.dataset.id);
+                openQuickView(productId);
+            }
+        });
+    });
+
     // Caso `imageLocal` esteja configurado e falhe, cai para a imagem remota
     applyImageFallback(productsGrid);
 }
@@ -411,7 +427,6 @@ function openQuickView(productId) {
     // Show modal
     modalOverlay.classList.add('active');
     quickViewModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
 
     applyImageFallback(modalContent);
 }
@@ -419,11 +434,55 @@ function openQuickView(productId) {
 function closeQuickView() {
     modalOverlay.classList.remove('active');
     quickViewModal.classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 closeModal.addEventListener('click', closeQuickView);
 modalOverlay.addEventListener('click', closeQuickView);
+
+// ============================================
+// IMAGE LIGHTBOX (Visualização em Tela Cheia)
+// ============================================
+const imageLightbox = document.getElementById('imageLightbox');
+const lightboxImage = document.getElementById('lightboxImage');
+const closeLightbox = document.getElementById('closeLightbox');
+
+function openLightbox(imageSrc) {
+    if (!imageSrc) return;
+    lightboxImage.src = imageSrc;
+    imageLightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightboxModal() {
+    imageLightbox.classList.remove('active');
+    document.body.style.overflow = '';
+    lightboxImage.src = '';
+}
+
+// Fechar lightbox ao clicar no X
+closeLightbox.addEventListener('click', closeLightboxModal);
+
+// Fechar lightbox ao clicar fora da imagem
+imageLightbox.addEventListener('click', (e) => {
+    if (e.target === imageLightbox || e.target.classList.contains('lightbox-content')) {
+        closeLightboxModal();
+    }
+});
+
+// Fechar lightbox com ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && imageLightbox.classList.contains('active')) {
+        closeLightboxModal();
+    }
+});
+
+// Adicionar evento de clique na imagem do modal (delegação de eventos)
+modalContent.addEventListener('click', (e) => {
+    const modalImage = e.target.closest('.modal-image img');
+    if (modalImage) {
+        openLightbox(modalImage.src);
+    }
+});
 
 // ============================================
 // CART FUNCTIONALITY
@@ -459,10 +518,17 @@ function updateCartUI() {
         return;
     }
 
-    cartItems.innerHTML = cart.map(item => `
+    cartItems.innerHTML = cart.map(item => {
+        const product = productsData.find(p => p.id === item.id);
+        const fallbackFromProduct = product ? (product.imageLocal || product.image) : null;
+        const fallback =
+            item.imageFallback ||
+            (fallbackFromProduct && fallbackFromProduct !== item.image ? fallbackFromProduct : null);
+
+        return `
         <div class="cart-item" data-id="${item.id}" data-size="${item.size}">
             <div class="cart-item-image">
-                <img src="${item.image}" ${item.imageFallback ? `data-fallback="${item.imageFallback}"` : ''} alt="${item.name}">
+                <img src="${item.image}" ${fallback ? `data-fallback="${fallback}"` : ''} alt="${item.name}">
             </div>
             <div class="cart-item-info">
                 <h4 class="cart-item-name">${item.name}</h4>
@@ -476,7 +542,8 @@ function updateCartUI() {
             </div>
             <button class="cart-item-remove" data-id="${item.id}" data-size="${item.size}">Remover</button>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Add event listeners for quantity buttons
     cartItems.querySelectorAll('.qty-minus').forEach(btn => {
@@ -747,14 +814,12 @@ function openCheckout() {
 
     checkoutOverlay.classList.add('active');
     checkoutModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
 }
 
 // Close checkout modal
 function closeCheckoutModal() {
     checkoutOverlay.classList.remove('active');
     checkoutModal.classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 // Update checkout summary
@@ -881,14 +946,12 @@ function showTrackingModal(orderNum) {
 
     if (trackingOverlay) trackingOverlay.classList.add('active');
     if (trackingModal) trackingModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
 }
 
 // Close tracking modal
 function closeTrackingModal() {
     if (trackingOverlay) trackingOverlay.classList.remove('active');
     if (trackingModal) trackingModal.classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 // Save order to localStorage AND Google Sheets
@@ -1076,14 +1139,12 @@ function openOrderTracking(orderCode = null) {
 
     orderTrackingOverlay.classList.add('active');
     orderTrackingModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
 }
 
 // Close order tracking modal
 function closeOrderTrackingModal() {
     orderTrackingOverlay.classList.remove('active');
     orderTrackingModal.classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 // Search for order (tenta Google Sheets primeiro, depois localStorage)
